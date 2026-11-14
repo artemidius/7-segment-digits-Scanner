@@ -22,14 +22,28 @@ public interface SevenDigitsRecognizer {
     public val supportedCharacters: Set<Char>
 
     /**
-     * Processes [bitmap] as a whole image, applying [options] internally.
+     * Recognizes a whole image as rows of strings, without requiring the client to handle boxes
+     * or scores. Each inner list holds the fields on one row in upright reading order.
+     *
+     * Uses the same options, bitmap ownership, cancellation, and failure contract as
+     * [recognizeVisual]. The default implementation performs recognition once and projects
+     * its existing row grouping into text. To obtain both views, call [recognizeVisual] once
+     * and then [RecognitionResult.toLines].
+     */
+    public suspend fun recognizeText(
+        bitmap: Bitmap,
+        options: RecognitionOptions = RecognitionOptions(),
+    ): Lines = recognizeVisual(bitmap, options).toLines()
+
+    /**
+     * Processes [bitmap] as a whole image and returns visual details, applying [options] internally.
      *
      * Do not modify or recycle [bitmap] until this call completes, including cancellation.
      * A successful result may contain partial text or no regions at all. An empty result means
      * no characters met the detection criteria; it does not prove that the photo contains none.
      *
      * Coordinates always refer to the supplied bitmap, before any processing rotation or resize.
-     * Regions follow reading order in the upright image: rows top to bottom, fields left to right.
+     * [RecognitionResult.lines] groups fields into upright rows, top to bottom and left to right.
      * No medical interpretation, numeric conversion, or inferred missing characters is applied.
      *
      * Implementations must propagate coroutine cancellation, release per-call resources, and
@@ -39,9 +53,8 @@ public interface SevenDigitsRecognizer {
      * @throws IllegalArgumentException if [bitmap] has been recycled or cannot be read.
      * @throws RecognitionException if recognition cannot complete because of an operational failure.
      */
-    public suspend fun recognize(
+    public suspend fun recognizeVisual(
         bitmap: Bitmap,
         options: RecognitionOptions = RecognitionOptions(),
     ): RecognitionResult
-
 }

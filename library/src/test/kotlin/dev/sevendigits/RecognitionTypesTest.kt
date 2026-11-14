@@ -9,9 +9,10 @@ class RecognitionTypesTest {
     @Test
     fun preservesWholeDisplayFieldsWithoutNumericConversion() {
         val expected = listOf("120", "80", "65", "11.11.2026", "11:05", "008", "-0,5", "+1/2")
-        val result = RecognitionResult(200, 200, expected.mapIndexed { row, text -> region(text, row * 22f) })
+        val result = RecognitionResult(200, 200, expected.mapIndexed { row, text -> listOf(region(text, row * 22f)) })
 
         assertEquals(expected, result.regions.map { it.text })
+        assertEquals(expected.map { listOf(it) }, result.toLines())
     }
 
     @Test
@@ -36,6 +37,8 @@ class RecognitionTypesTest {
         ))
         assertEquals("12", text.text)
         assertEquals(BoundingBox(0f, 0f, 10f, 30f), text.boundingBox)
+        val visual = RecognitionResult(100, 100, listOf(listOf(text, region("08"))))
+        assertEquals(listOf(listOf("12", "08")), visual.toLines())
     }
 
     @Test
@@ -43,30 +46,69 @@ class RecognitionTypesTest {
         val characters = mutableListOf(RecognizedCharacter('8', BoundingBox(0f, 0f, 10f, 20f), .9f))
         val text = TextRegion(characters)
         val regions = mutableListOf(text)
-        val result = RecognitionResult(100, 100, regions)
+        val rows = mutableListOf<List<TextRegion>>(regions)
+        val result = RecognitionResult(100, 100, rows)
         characters.clear()
         regions.clear()
+        rows.clear()
 
         assertEquals("8", result.regions.single().text)
         assertEquals(1, text.characters.size)
+        assertEquals(listOf(listOf("8")), result.toLines())
         assertThrows(UnsupportedOperationException::class.java) {
             (text.characters as MutableList).clear()
         }
         assertThrows(UnsupportedOperationException::class.java) {
             (result.regions as MutableList).clear()
         }
+        assertThrows(UnsupportedOperationException::class.java) {
+            (result.lines as MutableList).clear()
+        }
+        assertThrows(UnsupportedOperationException::class.java) {
+            (result.lines.single() as MutableList).clear()
+        }
     }
 
     @Test
     fun distinguishesEmptyDetectionFromInvalidRegionOrImage() {
         assertTrue(RecognitionResult(640, 480, emptyList()).regions.isEmpty())
+        assertTrue(RecognitionResult(640, 480, emptyList()).toLines().isEmpty())
         assertThrows(IllegalArgumentException::class.java) { TextRegion(emptyList()) }
+        assertThrows(IllegalArgumentException::class.java) { RecognitionResult(640, 480, listOf(emptyList())) }
         assertThrows(IllegalArgumentException::class.java) { RecognitionResult(0, 480, emptyList()) }
         assertThrows(IllegalArgumentException::class.java) { RecognitionResult(640, -1, emptyList()) }
-        assertThrows(IllegalArgumentException::class.java) { RecognitionResult(5, 20, listOf(region("8"))) }
-        assertThrows(IllegalArgumentException::class.java) { RecognitionResult(100, 10, listOf(region("8"))) }
+        assertThrows(IllegalArgumentException::class.java) { RecognitionResult(5, 20, listOf(listOf(region("8")))) }
+        assertThrows(IllegalArgumentException::class.java) { RecognitionResult(100, 10, listOf(listOf(region("8")))) }
         // Right/bottom edges may coincide with the image edges.
-        assertEquals("8", RecognitionResult(10, 20, listOf(region("8"))).regions.single().text)
+        assertEquals("8", RecognitionResult(10, 20, listOf(listOf(region("8")))).regions.single().text)
+    }
+
+    @Test
+    fun textViewKeepsMultipleFieldsOnOneRowAndSeparateRowsDistinct() {
+        val visual = RecognitionResult(300, 200, listOf(
+            listOf(region("120")),
+            listOf(region("80", top = 30f), region("65", top = 30f, left = 80f)),
+            listOf(region("11.11.2026", top = 60f), region("11:05", top = 60f, left = 150f)),
+        ))
+
+        val lines: Lines = visual.toLines()
+        assertEquals(listOf(listOf("120"), listOf("80", "65"), listOf("11.11.2026", "11:05")), lines)
+        assertEquals("65", lines[1][1])
+        assertEquals(5, visual.regions.size)
+    }
+
+    @Test
+    fun textViewIsImmutableAtBothListLevels() {
+        val visual = RecognitionResult(100, 100, listOf(listOf(region("008"))))
+        val lines = visual.toLines()
+
+        assertThrows(UnsupportedOperationException::class.java) {
+            (lines as MutableList).clear()
+        }
+        assertThrows(UnsupportedOperationException::class.java) {
+            (lines.single() as MutableList)[0] = "8"
+        }
+        assertEquals(listOf(listOf("008")), visual.toLines())
     }
 
     @Test
@@ -113,9 +155,9 @@ class RecognitionTypesTest {
         }
     }
 
-    private fun region(text: String, top: Float = 0f): TextRegion = TextRegion(
+    private fun region(text: String, top: Float = 0f, left: Float = 0f): TextRegion = TextRegion(
         text.mapIndexed { index, value ->
-            RecognizedCharacter(value, BoundingBox(index * 12f, top, index * 12f + 10f, top + 20f), .9f)
+            RecognizedCharacter(value, BoundingBox(left + index * 12f, top, left + index * 12f + 10f, top + 20f), .9f)
         },
     )
 }

@@ -13,20 +13,30 @@ step. Model experiments remain in the separate `7-Digits` project.
 
 ## Public API
 
-```kotlin
-import android.graphics.Bitmap
-import dev.sevendigits.SevenDigitsRecognizer
+Choose the text or visual entry point inside a coroutine.
 
-// The recognizer implementation will be supplied by the runtime integration.
-suspend fun readDisplay(recognizer: SevenDigitsRecognizer, photo: Bitmap): List<String> {
-    val result = recognizer.recognize(photo)
-    return result.regions.map { it.text }
-}
+**Text API** — rows of strings:
+
+```kotlin
+val lines: Lines = recognizer.recognizeText(photo)
+// Lines = List<List<String>>
+// Example: [["120"], ["80", "65"], ["11.11.2026", "11:05"]]
 ```
 
-Each region exposes its text, original-image bounding box, minimum character score,
-and individual characters. The API preserves leading zeros and punctuation and
-reports the loaded model's supported characters. See [the API contract](docs/API.md)
+The outer list contains rows from top to bottom. Each inner list contains fields
+from left to right. Strings preserve leading zeros, signs, and punctuation.
+
+**Visual API** — the same rows plus bounding boxes, scores, and characters:
+
+```kotlin
+val visual: RecognitionResult = recognizer.recognizeVisual(photo)
+val boxes = visual.regions.map { it.boundingBox }
+val lines: Lines = visual.toLines() // Reuse the result; no second inference.
+```
+
+`visual.lines` preserves the row grouping; `visual.regions` is a flattened view for
+overlays. Both entry points use the same options and model capabilities.
+The runtime integration will provide the concrete recognizer. See [the API contract](docs/API.md)
 for rotation, errors, cancellation, and the current implementation status. Each
 recognition call owns its resources through structured concurrency; callers use a
 suspend function without a manual lifecycle method.
