@@ -1,21 +1,22 @@
 package dev.sevendigits
 
 import android.graphics.Bitmap
-import java.io.Closeable
 
 /**
  * Recognizes numeric text anywhere in a whole device photo.
  *
  * This interface defines the contract for the forthcoming recognition implementation.
  * Implementations must run expensive work off the calling thread, including when called
- * from the main thread, and serialize recognition calls on the same instance.
+ * from the main thread. Calls are independent and may run concurrently.
  *
- * The caller owns the recognizer and must finish, or cancel and await, pending calls before
- * calling [close]. The caller also owns each bitmap; implementations must not modify or recycle it.
+ * Each call owns its inference resources and child coroutines. Implementations must release
+ * those resources in finally blocks on success, failure, or cancellation, and must not leave
+ * detached work running after the call finishes. There is no manual resource lifecycle.
+ * The caller owns each bitmap; implementations must not modify or recycle it.
  */
-public interface SevenDigitsRecognizer : Closeable {
+public interface SevenDigitsRecognizer {
     /**
-     * Immutable set of characters the loaded model can recognize. This describes the model's
+     * Immutable set of characters the model can recognize. This describes the model's
      * vocabulary, not a guarantee that every occurrence of a character will be detected.
      */
     public val supportedCharacters: Set<Char>
@@ -36,7 +37,6 @@ public interface SevenDigitsRecognizer : Closeable {
      * remains usable after a cancelled call; a native invocation may need to finish first.
      *
      * @throws IllegalArgumentException if [bitmap] has been recycled or cannot be read.
-     * @throws IllegalStateException if this recognizer has been closed.
      * @throws RecognitionException if recognition cannot complete because of an operational failure.
      */
     public suspend fun recognize(
@@ -44,9 +44,4 @@ public interface SevenDigitsRecognizer : Closeable {
         options: RecognitionOptions = RecognitionOptions(),
     ): RecognitionResult
 
-    /**
-     * Releases resources. Call only after pending recognition calls have completed.
-     * Repeated calls have no effect. Subsequent [recognize] calls throw [IllegalStateException].
-     */
-    public override fun close(): Unit
 }

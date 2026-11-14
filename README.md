@@ -27,7 +27,9 @@ suspend fun readDisplay(recognizer: SevenDigitsRecognizer, photo: Bitmap): List<
 Each region exposes its text, original-image bounding box, minimum character score,
 and individual characters. The API preserves leading zeros and punctuation and
 reports the loaded model's supported characters. See [the API contract](docs/API.md)
-for rotation, errors, cancellation, lifecycle, and the current implementation status.
+for rotation, errors, cancellation, and the current implementation status. Each
+recognition call owns its resources through structured concurrency; callers use a
+suspend function without a manual lifecycle method.
 
 ## Build
 
