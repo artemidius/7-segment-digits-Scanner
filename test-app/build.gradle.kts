@@ -12,6 +12,7 @@ android {
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -21,5 +22,11 @@ android {
 }
 
 dependencies {
-    implementation(project(":library"))
+    implementation(files("libs/seven-digits.aar"))
+    // A bare AAR has no Maven metadata, so its runtime dependencies are explicit.
+    implementation(libs.litert)
+    implementation(libs.coroutines.android)
+    implementation(libs.exifinterface)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
 }

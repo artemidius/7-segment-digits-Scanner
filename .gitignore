@@ -11,3 +11,5 @@ captures/
 *.jks
 *.keystore
 .env
+test-app/libs/*.aar
+test-app/src/main/assets/seven-digits/

@@ -5,7 +5,7 @@ Standalone Android project for the 7-Digits library and its test app.
 | Module | Purpose |
 | --- | --- |
 | `:library` | Android library, published as a release AAR with sources and Maven metadata. |
-| `:test-app` | Minimal Android app depending on the library; launches an empty `MainActivity`. |
+| `:test-app` | Gallery demo consuming a local `.aar`; shows the image, boxes, and both API outputs. |
 
 The library implements both recognition APIs with a private, coroutine-based
 LiteRT CPU pipeline. Supply a compatible model and label metadata as app assets.
@@ -30,6 +30,10 @@ this implementation. That research model recognizes digits only, misses the
 clock/date content in our monitor examples, and carries upstream AGPL terms.
 Model files are supplied separately and are **not bundled in the library AAR**.
 See [model setup and runtime details](docs/API.md#model-assets).
+
+The library returns detected numeric text wherever it appears on the display. It
+does not identify or parse dates, times, blood pressure, or pulse; those meanings
+belong to the client. No date/time filtering is applied to detections.
 
 ## Public API
 
@@ -69,7 +73,9 @@ Use JDK 17 or newer (verified with JDK 21), Android SDK Platform 37 and Build To
 The minimum supported Android API is currently 23.
 
 ```sh
-./gradlew :library:assembleRelease :test-app:assembleDebug
+./gradlew :library:assembleRelease
+python3 scripts/prepare_test_app.py
+./gradlew :test-app:assembleDebug
 ./gradlew :library:testDebugUnitTest
 ./gradlew :library:lintRelease :test-app:lintDebug
 ```
@@ -83,6 +89,54 @@ Kotlin support is built into Android Gradle Plugin 9.5.1. Versions are defined i
 `gradle/libs.versions.toml`; the wrapper pins Gradle and its distribution checksum.
 The runtime uses LiteRT 1.4.2's CPU Interpreter and kotlinx.coroutines 1.11.0;
 these implementation dependencies are included in the published Maven metadata.
+
+## Gallery test app
+
+The app uses `implementation(files("libs/seven-digits.aar"))`, with no dependency
+on the library Gradle project. Because a bare AAR carries no dependency metadata,
+the app declares LiteRT and coroutines explicitly. `prepare_test_app.py` copies the
+release AAR into `test-app/libs/` and the converted research model, JSON, and license
+into `test-app/src/main/assets/seven-digits/`. These generated inputs are Git-ignored
+and survive Gradle `clean`. After changing the library, rebuild its release AAR and
+rerun preparation to update the app's copy. The script accepts `--aar`, `--model-dir`,
+and `--model-license` for other local inputs. The default model location is the
+sibling `7-Digits` research project; it is required on a fresh checkout.
+
+Install/run the `test-app` configuration in Android Studio, or:
+
+```sh
+./gradlew :test-app:installDebug
+adb shell am start -n dev.sevendigits.testapp/.MainActivity
+```
+
+- **Gallery** opens the system document picker for images. No broad storage access
+  or camera permission is requested. Cancelling the picker preserves the current result.
+- The selected image appears on the same scrollable page. Blue boxes show fields;
+  orange boxes show characters. Toggle **Show bounding boxes** to see the plain image.
+- **String API · Lines** shows the actual nested string lists. **Visual API · Details**
+  shows the full result as JSON, including coordinates, characters, and confidence.
+  The sample calls both APIs independently to exercise them; it does not parse or
+  label their values. Application code that needs both views can instead use
+  `recognizeVisual(...).toLines()` to avoid a second inference.
+- **Camera** is visible and disabled for this stage.
+
+Image loading and recognition run off the main thread. Large images are sampled
+to a maximum side of 2048 pixels and EXIF rotation/mirroring is applied before
+recognition. Both APIs and the preview use this same decoded bitmap, so returned
+coordinates refer to it. Activity recreation reloads the selected URI and reruns
+recognition; cancellation releases native resources before bitmap memory is reclaimed.
+Loading, empty results, inaccessible/invalid images, and recognition errors have
+explicit states on the page.
+
+The development APK includes the supplied model and its license; the library AAR
+still contains no model. Run app tests with `./gradlew :test-app:connectedDebugAndroidTest`
+after preparing the AAR/model and connecting an emulator/device.
+
+Verified on Android 14 / API 34: a photo selected through the actual system picker
+displayed `[["126"], ["81"], ["81"]]` and matching visual boxes/details. Three app
+instrumentation tests passed, covering empty results through both APIs, picker
+cancellation, activity recreation, all eight EXIF orientations, bounded large-image
+decoding, and invalid image rejection.
 
 ## Android integration tests
 

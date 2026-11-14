@@ -1,3 +1,23 @@
 <resources>
     <string name="app_name">7-Digits Test App</string>
+    <string name="screen_title">7-Digits</string>
+    <string name="screen_subtitle">Choose a photo of a device display.</string>
+    <string name="gallery">Gallery</string>
+    <string name="camera">Camera</string>
+    <string name="camera_unavailable">Camera — coming later</string>
+    <string name="initial_status">Pick an image to see both recognition outputs. Camera is not available yet.</string>
+    <string name="loading">Loading image…</string>
+    <string name="recognizing">Reading display…</string>
+    <string name="complete">Done · Image: %1$d × %2$d · Fields: %3$d</string>
+    <string name="no_detections">No characters detected. Both APIs returned empty lists.</string>
+    <string name="recognition_failed">Could not read this image. %1$s</string>
+    <string name="picker_unavailable">No system image picker is available on this device.</string>
+    <string name="image_title">Scanned image / Visual API</string>
+    <string name="show_boxes">Show bounding boxes</string>
+    <string name="box_legend">Blue: fields · orange: individual characters</string>
+    <string name="text_title">String API · Lines</string>
+    <string name="visual_title">Visual API · Details</string>
+    <string name="preview_description">Selected image. Detected text: %1$s</string>
+    <string name="preview_loading">Selected image, recognition pending</string>
+    <string name="results_differ">Done. The two API calls returned different text; inspect the results below.</string>
 </resources>
