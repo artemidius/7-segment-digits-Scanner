@@ -1,11 +1,12 @@
 package dev.sevendigits
 
 import android.graphics.Bitmap
+import android.content.Context
+import dev.sevendigits.internal.createLiteRtRecognizer
 
 /**
  * Recognizes numeric text anywhere in a whole device photo.
  *
- * This interface defines the contract for the forthcoming recognition implementation.
  * Implementations must run expensive work off the calling thread, including when called
  * from the main thread. Calls are independent and may run concurrently.
  *
@@ -15,6 +16,27 @@ import android.graphics.Bitmap
  * The caller owns each bitmap; implementations must not modify or recycle it.
  */
 public interface SevenDigitsRecognizer {
+    /** Creates recognizers backed by the library's private CPU inference implementation. */
+    public companion object {
+        /**
+         * Loads an immutable model snapshot and label metadata from app assets off the main thread.
+         * The returned recognizer has no manual lifecycle and retains no Activity or Context.
+         *
+         * The model must accept RGB float32 `[1,height,width,3]` input in 0..1 and produce
+         * float32 `[1,4+classes,candidates]` output: pixel-space xywh boxes and class scores.
+         * Metadata supplies `names` indexed by class ID and `box_units: "input_pixels"`.
+         * An optional `model_sha256` is verified. Model files are supplied by the host app.
+         *
+         * @throws IllegalArgumentException if an asset path is blank.
+         * @throws RecognitionException if assets cannot be loaded or the model is incompatible.
+         */
+        public suspend fun create(
+            context: Context,
+            modelAssetPath: String = "seven-digits/detector.tflite",
+            metadataAssetPath: String = "seven-digits/detector.json",
+        ): SevenDigitsRecognizer = createLiteRtRecognizer(context.assets, modelAssetPath, metadataAssetPath)
+    }
+
     /**
      * Immutable set of characters the model can recognize. This describes the model's
      * vocabulary, not a guarantee that every occurrence of a character will be detected.
