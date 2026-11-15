@@ -3,9 +3,10 @@ package dev.sevendigits
 import android.graphics.Bitmap
 import android.content.Context
 import dev.sevendigits.internal.createLiteRtRecognizer
+import dev.sevendigits.internal.HybridRecognizer
 
 /**
- * Recognizes numeric text anywhere in a whole device photo.
+ * Recognizes seven-segment digits and printed Latin text anywhere in a whole device photo.
  *
  * Implementations must run expensive work off the calling thread, including when called
  * from the main thread. Calls are independent and may run concurrently.
@@ -34,12 +35,13 @@ public interface SevenDigitsRecognizer {
             context: Context,
             modelAssetPath: String = "seven-digits/detector.tflite",
             metadataAssetPath: String = "seven-digits/detector.json",
-        ): SevenDigitsRecognizer = createLiteRtRecognizer(context.assets, modelAssetPath, metadataAssetPath)
+        ): SevenDigitsRecognizer = HybridRecognizer(createLiteRtRecognizer(context.assets, modelAssetPath, metadataAssetPath))
     }
 
     /**
-     * Immutable set of characters the model can recognize. This describes the model's
-     * vocabulary, not a guarantee that every occurrence of a character will be detected.
+     * Immutable vocabulary of the app-supplied seven-segment model only. General text OCR
+     * can return additional Latin letters, units, and punctuation beyond this set. This is
+     * not an output whitelist or a guarantee that every occurrence will be detected.
      */
     public val supportedCharacters: Set<Char>
 

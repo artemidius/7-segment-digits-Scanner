@@ -1,13 +1,9 @@
 # Public recognition API
 
-Package: `dev.sevendigits`. This is an initial 0.1 API contract, subject to refinement
-before a stable release. All public declarations have KDoc and explicit visibility/types.
+Package: `dev.sevendigits`. This is the `0.2.0-alpha.1` hybrid API, available from
+JitPack. The earlier `0.1.0-alpha.1` uses the original numeric pipeline.
 
-Both entry points are backed by a private LiteRT CPU implementation. The public
-factory loads a model and metadata from app assets. The test app consumes the
-library as a local AAR and demonstrates both outputs for a gallery image.
-
-## Model assets
+## Creation and ownership
 
 ```kotlin
 val recognizer = SevenDigitsRecognizer.create(
@@ -17,203 +13,144 @@ val recognizer = SevenDigitsRecognizer.create(
 )
 ```
 
-Both paths are relative to app assets and have the defaults shown. Creation is
-suspending and safe to call from the main thread. It reads an immutable snapshot,
-verifies the optional checksum, validates the model's tensors with LiteRT, and
-returns a recognizer without retaining the Context. No network access occurs.
+Creation loads and validates an immutable detector snapshot off the main thread.
+The recognizer retains no Activity or Context. Supply a compatible detector and
+metadata in app assets; see [the model contract](MODELS.md). ML Kit Latin text OCR
+is a bundled Gradle dependency, so it needs no first-use model download.
 
-Supported model contract:
+The caller owns each input bitmap. Do not modify or recycle it before the call
+finishes. After cancelling a job, join it before releasing its bitmap. Independent
+calls can run concurrently. There is no public `close()` or manual resource lifecycle.
 
-- One float32 input `[1, height, width, 3]`, RGB normalized to 0..1.
-- One float32 output `[1, 4 + classCount, candidateCount]` containing xywh boxes
-  in input pixels followed by per-class scores in 0..1.
-- Fixed positive image dimensions and candidate count. Floating-point weights,
-  including float16 weights with float32 input/output, are supported.
-- Metadata JSON containing `box_units: "input_pixels"` and a `names` object with
-  contiguous class IDs starting at zero. Optional `model_sha256` pins the model bytes.
-
-Example metadata for a model with three digit classes and one enclosing-region class:
-
-```json
-{
-  "box_units": "input_pixels",
-  "names": {"0": "0", "1": "1", "2": "2", "3": "display"}
-}
-```
-
-Use the actual labels and class order of your model. The SMART-BP experiment has
-11 classes and an unusual order; its class named `10` means a reading region.
-Unknown/non-character labels are excluded before suppression. Names such as
-`dot`, `comma`, `colon`, `minus`, and `plus` map to the corresponding characters.
-
-The Android AAR includes the engine and Maven dependencies, not model weights.
-The optional SMART-BP model can be fetched and converted using the pinned
-[model setup](MODELS.md). Retain its upstream licensing terms when packaging that
-model; selecting a general-purpose release model remains separate.
-
-## Two entry points
+## Two views of the same result
 
 ```kotlin
 typealias Lines = List<List<String>>
 
-interface SevenDigitsRecognizer {
-    val supportedCharacters: Set<Char>
+val lines: Lines = recognizer.recognizeText(bitmap)
 
-    suspend fun recognizeText(
-        bitmap: android.graphics.Bitmap,
-        options: RecognitionOptions = RecognitionOptions(),
-    ): Lines
-
-    suspend fun recognizeVisual(
-        bitmap: android.graphics.Bitmap,
-        options: RecognitionOptions = RecognitionOptions(),
-    ): RecognitionResult
-}
+val visual: RecognitionResult = recognizer.recognizeVisual(bitmap)
+val sameLines: Lines = visual.toLines()
 ```
 
-`recognizeText` returns only rows of strings. Each string is a detected field,
-such as `"120"` or `"11:05"`, not an individual character. The outer list orders
-rows top to bottom; each inner list orders fields left to right. Both orders refer
-to the upright image. This is exactly `List<List<String>>`, with no wrapper object
-or visual metadata. Returned lists are immutable at both levels.
+`Lines` is exactly a list of rows, each containing a list of words or numeric fields.
+Rows run top to bottom and fields left to right in the upright image. Both list
+levels are immutable. `recognizeText` calls the visual pipeline and projects its
+result; use `visual.toLines()` to get both views without running recognition twice.
 
-`recognizeVisual` returns the detailed `RecognitionResult`. Its `lines` property
-holds the same grouping as `List<List<TextRegion>>`; `regions` flattens the fields
-for drawing overlays. `visual.toLines()` projects those rows to strings without
-running inference again, sorting by original-image coordinates, or joining fields.
-
-The default `recognizeText` implementation calls `recognizeVisual` once and returns
-`toLines()`. Both paths therefore share detection, options, grouping, and errors.
-To obtain both representations, call `recognizeVisual` and then `toLines()`;
-calling both entry points separately performs two recognition operations.
-
-Input is the **whole photo** as a bitmap. Detection, scaling, character recognition,
-and grouping belong inside the implementation. Callers do not crop individual digits.
-The bitmap belongs to the caller; keep it unchanged and unrecycled until the call
-finishes. The library must not modify or recycle it.
-
-`supportedCharacters` describes the loaded model's vocabulary. For example, a
-digits-only model cannot promise `11:05` or `11.11.2026` even though the result types
-can represent those strings. Vocabulary support alone does not establish accuracy.
-
-## Options and coordinates
-
-`RecognitionOptions` has two fields:
-
-- `rotationDegrees = 0`: clockwise correction to make the bitmap upright; allowed
-  values are 0, 90, 180, and 270. Apply any EXIF mirroring while decoding. If the
-  bitmap is already upright, use 0 regardless of the original file's EXIF value.
-- `minimumCharacterConfidence = 0.25f`: inclusive per-character score threshold,
-  finite and in 0..1. Raising it can omit digits and leave partial readings.
-
-`RecognitionResult.imageWidth` and `imageHeight` always describe the supplied
-bitmap. Every `BoundingBox` uses that original coordinate system, including when
-rotation is requested. A runtime must undo its processing rotation and scaling
-before returning boxes. This lets an app draw overlays on the original bitmap.
-
-Boxes contain finite float coordinates, start at the top-left, and use exclusive
-right/bottom edges. They have positive area and stay inside the image boundaries.
-Regions and their characters follow **upright reading order**, which can differ
-from coordinate order in a rotated original bitmap.
-
-## Visual output
-
-`RecognitionResult.lines` is an immutable list of immutable rows of `TextRegion`
-instances. Rows must be nonempty; no detections is an empty outer list. A region
-contains an immutable list of `RecognizedCharacter` values; it derives:
-
-- `text`: the exact character sequence, preserving signs, punctuation, and leading zeros.
-- `boundingBox`: the union of its character boxes.
-- `minimumCharacterConfidence`: the lowest score among its characters.
-
-A character contains `value`, `boundingBox`, and `confidence`. Supported numeric
-symbols in the API are `0–9`, `.`, `,`, `:`, `-`, `/`, and `+`. Each model supports
-its own subset. Scores are model-dependent and are not calibrated probabilities
-that a character or an entire field is correct.
-
-For an image with three rows containing these fields, the text API would return:
+Example format (not an accuracy promise):
 
 ```kotlin
 listOf(
-    listOf("120"),
-    listOf("80", "65"),
-    listOf("11.11.2026", "11:05"),
+    listOf("20", "00"),
+    listOf("TEMP", "-12.5", "°C"),
+    listOf("METER", "001234", "kWh"),
 )
 ```
 
-This illustrates the data format, not current model performance. The research
-SMART-BP baseline still misses clock digits and lacks punctuation classes.
+The library preserves letters, leading zeros, recognized signs, and punctuation.
+It does not assign medical/date/time semantics, convert strings to numbers, add
+missing separators, or restrict detection to a device-specific region. Text on
+the housing or elsewhere in the image can also appear. The client interprets it.
+Handwriting recognition and non-Latin OCR models are not included.
 
-The API returns detected characters across the display without identifying dates,
-times, or medical measurements. It does not filter out date/time content, assign
-SYS/DIA/pulse labels, convert strings to numbers or dates, insert missing characters,
-or claim a reading is complete. Meaning is exclusively the client's responsibility. A successful empty
-outer list means nothing met the detection criteria. Partial results are also possible.
-Empty rows and placeholder strings are not inserted to represent gaps or missed content.
+## Options
 
-## Execution and failures
+```kotlin
+RecognitionOptions(
+    rotationDegrees = 0,
+    minimumCharacterConfidence = 0.25f,
+    recognizePrintedText = true,
+    detectSmallCharacters = true,
+)
+```
 
-The calling coroutine owns each recognition operation. Calls are independent and
-may run concurrently on the same recognizer. The runtime implementation must move
-expensive work off the calling thread, including when called from the main thread.
-It must use structured concurrency, keep inference resources local to the call,
-and release them in `finally` on completion, failure, or cancellation. It must
-finish its child work before returning and must not use detached background jobs.
-The supplied implementation uses `Dispatchers.IO` for loading and `Dispatchers.Default`
-for recognition, with cancellation checks between stages and during preprocessing,
-decoding, and grouping. Each call constructs its own CPU interpreter from shared
-read-only model data and releases it with `finally`/`use` before returning. Native
-inference is not interrupted mid-call; cancellation is checked immediately afterwards.
-This trades interpreter initialization per photo for isolated, automatically managed calls.
+- `rotationDegrees`: clockwise correction, one of 0, 90, 180, or 270. Handle EXIF
+  mirroring during decoding; use 0 if the bitmap is already upright.
+- `minimumCharacterConfidence`: inclusive LiteRT character threshold in 0..1.
+  General OCR preserves whole words and their low-scoring symbols; deleting a
+  symbol from an otherwise recognized word can silently change its meaning.
+- `recognizePrintedText`: run bundled ML Kit Latin OCR and merge with the detector.
+  Setting it to false skips OCR execution but does not remove the SDK dependency.
+- `detectSmallCharacters`: use nine overlapping half-size detector crops when the
+  full frame would be downsampled by more than 2×, and a max-channel grayscale OCR
+  view that reduces colored backlight interference. This increases latency and does not guarantee recall.
 
-- Invalid options, result values, or unreadable/recycled input: `IllegalArgumentException`.
-- Operational failures, including inference/model resource failures: `RecognitionException`.
-- Coroutine cancellation: propagate cancellation unchanged; never return empty success
-  or wrap it as `RecognitionException`. A native invocation may finish before the
-  call can return. The recognizer remains usable afterwards.
+Set both Boolean options to false for the original single-pass numeric pipeline.
+`supportedCharacters` remains the vocabulary of the app-supplied LiteRT model. It
+is **not** a whitelist for hybrid output: general OCR can add letters and punctuation.
 
-Catch `RecognitionException` for recognition failures; diagnostic messages are not
-a stable machine-readable code or user-facing copy. Empty detections are ordinary
-successful results, distinct from failures.
+## Visual output
 
-For example, recognition can run inside `viewModelScope.launch { ... }`; cancellation
-of that coroutine also cancels recognition. The native invocation may need to
-finish before resources can safely be released. The bitmap remains caller-owned:
-after cancelling a job, await its completion before modifying or recycling it.
-The recognizer remains reusable; there is no manual shutdown step.
+`RecognitionResult` contains the original `imageWidth`, `imageHeight`, immutable
+`lines: List<List<TextRegion>>`, and flattened `regions` in upright reading order.
+
+Each `TextRegion` contains an immutable character list and derives:
+
+- `text`: the exact sequence of character values.
+- `boundingBox`: the union of character boxes in original bitmap pixels.
+- `minimumCharacterConfidence`: the smallest character score, useful for inspecting
+  weak characters but not a calibrated probability of field accuracy.
+
+Each `RecognizedCharacter` has `value: Char`, `boundingBox`, `confidence`, and
+`source: RecognitionSource` (`SEVEN_SEGMENT` or `GENERAL_TEXT`). Visible letters,
+numbers, punctuation, and units are accepted; whitespace/control characters are
+not. A multi-unit UTF-16 OCR symbol shares its bounding box across its code units.
+Scores are in 0..1 and are not comparable across the two engines.
+
+Boxes have finite coordinates, positive area, and exclusive right/bottom edges.
+They always fit within the original input bitmap, even after processing rotation
+or cropping. Transform them into view coordinates when drawing overlays. Sorting
+by original coordinates can destroy upright reading order on a rotated image.
+
+## Pipeline and merging
+
+The hybrid pipeline first makes the image upright, runs OCR on the original color
+view and optionally a max-channel grayscale view, then runs the detector. All
+recognition is on-device; see [ML Kit's terms](https://developers.google.com/ml-kit/terms)
+for its separate SDK metrics behavior.
+
+The detector uses RGB normalization and gray letterboxing, ignores enclosing-region
+classes before class-agnostic NMS, and preserves full-frame detections while adding
+non-overlapping zoom detections. Truncated detections at internal crop edges are
+excluded. There are no blood-pressure-specific crops, label rules, or field limits.
+
+Merging uses spatial overlap and reading order. General OCR supplies ordinary
+words/units; detector characters take precedence in overlapping numeric fields.
+Complete detector fields suppress duplicate OCR fragments, while recognized
+punctuation is retained. Extra OCR views add uncovered text, including missing suffixes, while preserving
+existing characters. These are heuristics, not a guarantee of correct conflict resolution.
+No raw confidence comparison between engines decides which text wins.
+
+## Cancellation and failures
+
+The calling coroutine owns the work. Loading uses `Dispatchers.IO`; recognition
+runs on `Dispatchers.Default`. Each call owns its interpreter, OCR client, and any
+temporary bitmaps, and releases them in `finally` blocks.
+
+LiteRT native invocations and ML Kit tasks may finish before cancellation returns.
+The library waits for an in-flight OCR task before closing its client or releasing
+its bitmap. It then propagates cancellation; it never leaves detached recognition
+running against caller-owned image data. A cancelled recognizer remains reusable.
+
+- Invalid input/options/result values: `IllegalArgumentException`.
+- Model loading or recognition failures: `RecognitionException` (with a cause).
+- Cancellation: `CancellationException`, never converted into an empty result.
+- A successful empty outer list: no detected text. It is not proof the image is empty.
+
+Partial output, missed symbols, and false positives remain possible. The current
+research detector was trained on blood-pressure displays; general OCR and extra
+views improve coverage but do not replace testing on each intended device family.
 
 ## Verification
 
-Unit tests cover multiple fields per row, separate rows, exact string preservation,
-reading order after rotation, small punctuation bounds, minimum scores, defensive
-collection snapshots and text projection at both list levels, empty detections,
-image boundaries, and invalid/non-finite values. Decoder tests cover ignored classes,
-overlapping detections, clipping, threshold boundaries, row/field grouping, punctuation,
-all rotation transforms, and odd aspect ratios. Controlled blocking-session tests
-verify cleanup on success/failure and that cancellation waits for a native call to
-finish before releasing resources.
+JVM tests cover contracts, immutable snapshots, suppression, crop/rotation geometry,
+merging labels with digits, punctuation, duplicates, and inference cleanup.
+Device tests retain exact original single-pass numeric assertions, add clock digits
+and labels on both pinned photos, and exercise printed thermometer/meter/sensor
+text, rotated boxes, blank input, task cancellation, and hardware bitmaps.
 
-Six device tests ran on Android 14 / API 34 ARM64 using the real converted SMART-BP
-model. Both full-photo fixtures returned `[["126"], ["81"], ["81"]]` through text and
-visual APIs. Tests also cover rotated photos and box coordinates, concurrent calls,
-cancellation and reuse, invalid model assets, blank/recycled images, normalization,
-padding, and hardware bitmaps. The 19 JVM tests and all device tests passed.
-
-The two photos are development fixtures from the MIT-licensed
+The two real photos are development fixtures from the MIT-licensed
 [bp-tracker](https://github.com/chakib-belgaid/bp-tracker/tree/ba4701e3e72767d096b48fb1b3277664a58b0138)
-repository. This verifies the Android pipeline on those examples, not recognition
-accuracy across devices. Clock/date recognition remains limited by the selected model.
-
-## Private pipeline
-
-The implementation uses the maintained LiteRT 1.4.2 Interpreter branch for CPU
-inference ([Android runtime versions](https://developers.google.com/edge/litert/android)).
-It applies rotation and aspect-preserving resizing into a gray (114) letterbox,
-normalizes RGB pixels, then decodes model candidates. Character filtering precedes
-class-agnostic IoU suppression at 0.45 so enclosing reading boxes do not hide digits.
-Grouping uses digit-row geometry, attaches nearby punctuation, splits wide horizontal
-gaps into fields, and maps boxes back to the original bitmap after grouping.
-
-These operations are implementation details; neither LiteRT types nor native resource
-management appears in the public recognition API. The model is loaded once per factory
-call; the process/GC manages the immutable model buffer's lifetime.
+repository. They are not a held-out benchmark. Printed instrument test images are
+generated in the tests; broad real thermometer/meter/sensor accuracy is unmeasured.

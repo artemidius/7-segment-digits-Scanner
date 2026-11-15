@@ -54,6 +54,43 @@ class GalleryFlowTest {
     }
 
     @Test
+    @Suppress("DEPRECATION")
+    fun galleryUsesHybridAarAndShowsPrintedTextInBothApis() {
+        val file = File(context.cacheDir, "printed-gallery-test.png")
+        val bitmap = Bitmap.createBitmap(1000, 400, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; textSize = 64f }
+        Canvas(bitmap).apply {
+            drawText("TEMP -12.5 °C", 60f, 110f, paint)
+            drawText("METER 001234 kWh", 60f, 250f, paint)
+        }
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        bitmap.recycle()
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity {
+                    it.onActivityResult(100, Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))
+                }
+                val deadline = System.currentTimeMillis() + 60_000
+                var lines = ""
+                while (System.currentTimeMillis() < deadline) {
+                    scenario.onActivity { lines = it.findViewById<TextView>(R.id.text_output).text.toString() }
+                    if (lines.contains("TEMP")) break
+                    Thread.sleep(100)
+                }
+                for (text in listOf("TEMP", "-12.5", "°C", "METER", "001234", "kWh")) {
+                    assertTrue("Missing $text in $lines", lines.contains(text))
+                }
+                scenario.onActivity {
+                    val visual = it.findViewById<TextView>(R.id.visual_output).text.toString()
+                    assertTrue(visual.contains("GENERAL_TEXT"))
+                    assertTrue(visual.contains("METER"))
+                    assertEquals(View.VISIBLE, it.findViewById<View>(R.id.image_section).visibility)
+                }
+            }
+        } finally { file.delete() }
+    }
+
+    @Test
     fun decoderAppliesAllExifOrientationsIncludingMirrors() = runBlocking {
         val source = Bitmap.createBitmap(120, 80, Bitmap.Config.ARGB_8888)
         val colors = listOf(Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW)

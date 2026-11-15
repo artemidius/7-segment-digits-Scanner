@@ -62,10 +62,10 @@ broken certificate setup; repair its CA configuration or use a configured Python
 
 | Suite | Coverage |
 | --- | --- |
-| 19 JVM tests | Result contracts, immutable snapshots, NMS, grouping, geometry, cancellation and cleanup |
+| JVM tests | Result contracts, immutable snapshots, NMS, mixed-text merging, crop geometry, cancellation and cleanup |
 | 4 Python tests | Model/download integrity and rejection of corrupt assets |
-| 6 library device tests | Real LiteRT inference, two photos, rotations, concurrent calls, invalid models, bitmap formats |
-| 6 app device tests | Gallery/camera results, lifecycle, permissions, cancellation, errors, EXIF, bounded decoding |
+| Library device tests | Numeric baseline, hybrid clock/label regressions, printed meter/sensor text, rotations, cancellation, invalid models, bitmap formats |
+| App device tests | Hybrid AAR gallery output, gallery/camera results, lifecycle, permissions, cancellation, errors, EXIF, bounded decoding |
 
 Camera intent-interception tests require API 26+ and are explicitly skipped on API 23.
 The other tests run on both CI devices. Actual camera capture and recovery after
@@ -95,6 +95,21 @@ The Release workflow reruns CI, checks that the tag matches the version, verifie
 artifact hashes, then publishes a GitHub release. Versions containing `-` are
 marked prereleases. It publishes an AAR, source JAR, Maven bundle, license/notices,
 and SHA-256 checksums. No model-bearing APK is published automatically.
+JitPack separately builds tagged source using `jitpack.yml`, Java 21, and the
+required Android SDK packages. It runs only `:library:publishToMavenLocal` with
+JitPack's `GROUP`, `ARTIFACT`, and `VERSION` coordinates; it does not fetch a model
+or require the demo's local AAR. CI checks the same publication shape by compiling
+an independent Android consumer with only the published dependency.
+
+After tagging, request the version on JitPack and verify the actual hosted artifact:
+
+```sh
+python3 scripts/verify_maven_consumer.py --repository https://jitpack.io \
+  --coordinate com.github.artemidius:7-segment-digits-Scanner:v0.2.0-alpha.1
+```
+
+JitPack and GitHub Actions are separate services. A green GitHub run alone does not
+prove that JitPack built successfully; inspect its build log and the consumer check.
 Maven Central publishing and Play Store deployment are not configured.
 
 Local equivalent:

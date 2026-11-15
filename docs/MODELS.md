@@ -1,7 +1,9 @@
 # Models and provenance
 
-The library is a detector runtime. No trained model is bundled in its AAR or release
-bundle. Supply a model whose license and accuracy fit your application.
+The library combines an app-supplied LiteRT detector with bundled ML Kit Latin OCR.
+No detector weights are included in our AAR or release bundle. The ML Kit Gradle
+dependency packages Google’s OCR model into the consuming app. Supply a detector
+whose license and accuracy fit your application.
 
 ## Tensor contract
 
@@ -19,7 +21,7 @@ class IDs starting at 0, and optionally `model_sha256`. The setup scripts requir
 the checksum; the runtime verifies it when present. Preserve the model's actual
 class order. Unknown labels such as enclosing display regions are ignored before NMS.
 
-Supported output symbols are `0123456789.,:-/+`. The aliases `dot`, `comma`, `colon`,
+Supported **LiteRT model labels** are `0123456789.,:-/+`. The aliases `dot`, `comma`, `colon`,
 `minus`, and `plus` are recognized. The loaded model determines which symbols can
 actually be detected. The library does not parse, identify, or filter dates/times.
 
@@ -36,8 +38,12 @@ The baseline has digit classes `0–9` plus an enclosing-reading class named `10
 It has no punctuation classes and misses small digits in the example monitor's
 top row. Tests on two development photos read the main fields `126`, `81`, `81`;
 this is not an independent accuracy benchmark or a guarantee of complete-screen OCR.
-The target remains all numeric content on the display, with interpretation left
-to the client.
+The hybrid pipeline additionally recovers the top-row digits (`2001` / `20`, `00`)
+and printed labels in those fixtures through general OCR, including a max-channel
+grayscale view for colored backlighting. It does not infer a colon or interpret a
+time. This does not fix the detector’s underlying training bias: cropped clock
+digits can still be misclassified. Other device families need representative tests.
+Handwriting and non-Latin script OCR are outside this implementation.
 
 ### Fetch and convert
 
