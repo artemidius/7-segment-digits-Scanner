@@ -94,17 +94,29 @@ private class LiteRtRecognizer(
         ) { session ->
             val transform = ImageTransform(bitmap.width, bitmap.height, options.rotationDegrees,
                 session.inputWidth, session.inputHeight)
-            val input = prepareImage(bitmap, transform)
+            val characters = ArrayList<dev.sevendigits.RecognizedCharacter>()
             val outputSize = floatTensorBytes(4 + labels.size, session.candidateCount)
             val output = ByteBuffer.allocateDirect(outputSize).order(ByteOrder.nativeOrder())
-            currentCoroutineContext().ensureActive()
-            session.run(input, output)
-            currentCoroutineContext().ensureActive()
-            output.rewind()
             val values = FloatArray(outputSize / 4)
-            output.asFloatBuffer().get(values)
-            val characters = decodeDetections(values, session.candidateCount, labels, transform,
-                options.minimumCharacterConfidence)
+            for (window in detectionWindows(transform.uprightWidth, transform.uprightHeight,
+                options.detectSmallCharacters && needsZoomPasses(transform))) {
+                currentCoroutineContext().ensureActive()
+                val view = ImageTransform(bitmap.width, bitmap.height, options.rotationDegrees,
+                    session.inputWidth, session.inputHeight, window)
+                val input = prepareImage(bitmap, view)
+                output.rewind()
+                session.run(input, output)
+                currentCoroutineContext().ensureActive()
+                output.rewind()
+                output.asFloatBuffer().get(values)
+                val found = decodeDetections(values, session.candidateCount, labels, view,
+                    options.minimumCharacterConfidence)
+                    .filter { window.containsComplete(it.boundingBox, transform.uprightWidth, transform.uprightHeight) }
+                // Preserve full-frame readings. Zoom passes only add non-overlapping detections.
+                for (candidate in found.sortedByDescending { it.confidence }) {
+                    if (characters.none { sameGlyph(it.boundingBox, candidate.boundingBox) }) characters.add(candidate)
+                }
+            }
             val lines = groupDetections(characters).map { row ->
                 row.map { field ->
                     dev.sevendigits.TextRegion(field.map { it.copy(boundingBox = transform.toOriginal(it.boundingBox)) })

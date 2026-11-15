@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0-alpha.1
+
+- Add JitPack delivery with transitive runtime dependencies and an Android consumer check.
+- Combine the LiteRT detector with bundled ML Kit Latin OCR; return printed labels, units, and numeric fields.
+- Add overlapping detector views and max-channel grayscale OCR for small/backlit text.
+- Recover previously missed clock digits in both pinned development photos.
+- Merge spatial results, preserve OCR words and punctuation, and report each character’s source.
+- Keep `Lines` unchanged; allow visible text characters in the visual API.
+- Add opt-outs for printed text and extra small-character passes.
+- Add hybrid/rotation/cancellation regression tests and document the new AAR dependency.
+
+No handwriting model is included. Broader device accuracy is not yet benchmarked.
+
 ## 0.1.0-alpha.1
 
 Initial public preview:

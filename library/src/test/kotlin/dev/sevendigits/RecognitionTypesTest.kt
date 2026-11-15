@@ -147,8 +147,9 @@ class RecognitionTypesTest {
     }
 
     @Test
-    fun rejectsNonNumericSymbols() {
-        listOf('A', ' ', '\n').forEach { value ->
+    fun acceptsPrintedTextAndRejectsWhitespaceAndControls() {
+        assertEquals("TEMP36.5°C", region("TEMP36.5°C").text)
+        listOf(' ', '\n', '\u0000').forEach { value ->
             assertThrows(IllegalArgumentException::class.java) {
                 RecognizedCharacter(value, BoundingBox(0f, 0f, 10f, 20f), .9f)
             }

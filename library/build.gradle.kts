@@ -17,6 +17,7 @@ tasks.withType<Jar>().configureEach {
 dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.litert)
+    implementation(libs.mlkit.text)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
@@ -54,7 +55,7 @@ publishing {
 
             pom {
                 name.set("7-Digits")
-                description.set("Android library for seven-segment display recognition.")
+                description.set("On-device Android OCR for seven-segment displays and printed Latin text.")
                 url.set("https://github.com/artemidius/7-segment-digits-Scanner")
                 licenses {
                     license {

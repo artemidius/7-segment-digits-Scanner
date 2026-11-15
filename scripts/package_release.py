@@ -28,7 +28,7 @@ def main():
     ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
     assert pom.find('m:version', ns).text == version
     dependencies = {node.find('m:artifactId', ns).text for node in pom.findall('m:dependencies/m:dependency', ns)}
-    assert {'litert', 'kotlinx-coroutines-core'} <= dependencies
+    assert {'litert', 'kotlinx-coroutines-core', 'text-recognition'} <= dependencies
     assert pom.find('m:licenses/m:license/m:name', ns).text == 'Apache License, Version 2.0'
     output = ROOT/'dist'
     output.mkdir(exist_ok=True)

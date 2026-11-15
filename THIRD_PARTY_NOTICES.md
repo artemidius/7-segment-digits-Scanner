@@ -5,12 +5,17 @@ That license does not replace licenses on models, dependencies, or third-party i
 
 ## Runtime dependencies
 
+- Google ML Kit Text Recognition 16.0.1 and its bundled Latin OCR model —
+  [Google ML Kit Terms & Privacy](https://developers.google.com/ml-kit/terms).
+  This dependency is not covered by our Apache-2.0 license. Image/text processing
+  stays on-device; the SDK may transmit usage/performance metrics.
 - Google LiteRT 1.4.2 — Apache-2.0: https://github.com/google-ai-edge/LiteRT
 - Kotlin and kotlinx.coroutines — Apache-2.0: https://github.com/Kotlin/kotlinx.coroutines
 - AndroidX Core and ExifInterface (demo app) — Apache-2.0: https://android.googlesource.com/platform/frameworks/support/
 
 These are dependency references in the library publication; no model weights are
-included in the AAR. Consumers distributing an application must retain applicable
+included in our AAR itself. ML Kit supplies OCR weights transitively to the final app.
+Consumers distributing an application must retain applicable
 notices for the dependencies they package.
 
 ## Optional SMART-BP research model

@@ -11,22 +11,27 @@ internal class ImageTransform(
     val rotation: Int,
     val inputWidth: Int,
     val inputHeight: Int,
+    val window: DetectionWindow? = null,
 ) {
     val uprightWidth = if (rotation == 90 || rotation == 270) originalHeight else originalWidth
     val uprightHeight = if (rotation == 90 || rotation == 270) originalWidth else originalHeight
-    private val scale = min(inputWidth.toDouble() / uprightWidth, inputHeight.toDouble() / uprightHeight)
-    val resizedWidth = round(uprightWidth * scale).toInt().coerceIn(1, inputWidth)
-    val resizedHeight = round(uprightHeight * scale).toInt().coerceIn(1, inputHeight)
+    private val cropWidth = window?.width ?: uprightWidth
+    private val cropHeight = window?.height ?: uprightHeight
+    private val cropLeft = window?.left ?: 0
+    private val cropTop = window?.top ?: 0
+    private val scale = min(inputWidth.toDouble() / cropWidth, inputHeight.toDouble() / cropHeight)
+    val resizedWidth = round(cropWidth * scale).toInt().coerceIn(1, inputWidth)
+    val resizedHeight = round(cropHeight * scale).toInt().coerceIn(1, inputHeight)
     val offsetX = (inputWidth - resizedWidth) / 2
     val offsetY = (inputHeight - resizedHeight) / 2
-    val scaleX = resizedWidth.toFloat() / uprightWidth
-    val scaleY = resizedHeight.toFloat() / uprightHeight
+    val scaleX = resizedWidth.toFloat() / cropWidth
+    val scaleY = resizedHeight.toFloat() / cropHeight
 
     fun fromModel(x: Float, y: Float, width: Float, height: Float): BoundingBox? {
-        val left = ((x - width / 2 - offsetX) / scaleX).coerceIn(0f, uprightWidth.toFloat())
-        val top = ((y - height / 2 - offsetY) / scaleY).coerceIn(0f, uprightHeight.toFloat())
-        val right = ((x + width / 2 - offsetX) / scaleX).coerceIn(0f, uprightWidth.toFloat())
-        val bottom = ((y + height / 2 - offsetY) / scaleY).coerceIn(0f, uprightHeight.toFloat())
+        val left = ((x - width / 2 - offsetX) / scaleX).coerceIn(0f, cropWidth.toFloat()) + cropLeft
+        val top = ((y - height / 2 - offsetY) / scaleY).coerceIn(0f, cropHeight.toFloat()) + cropTop
+        val right = ((x + width / 2 - offsetX) / scaleX).coerceIn(0f, cropWidth.toFloat()) + cropLeft
+        val bottom = ((y + height / 2 - offsetY) / scaleY).coerceIn(0f, cropHeight.toFloat()) + cropTop
         return if (right > left && bottom > top) BoundingBox(left, top, right, bottom) else null
     }
 
@@ -38,12 +43,23 @@ internal class ImageTransform(
         else -> box
     }
 
-    fun drawingMatrix(): FloatArray = when (rotation) {
+    fun toUpright(box: BoundingBox): BoundingBox = when (rotation) {
+        90 -> BoundingBox(originalHeight - box.bottom, box.left, originalHeight - box.top, box.right)
+        180 -> BoundingBox(originalWidth - box.right, originalHeight - box.bottom,
+            originalWidth - box.left, originalHeight - box.top)
+        270 -> BoundingBox(box.top, originalWidth - box.right, box.bottom, originalWidth - box.left)
+        else -> box
+    }
+
+    fun drawingMatrix(): FloatArray = (when (rotation) {
         90 -> floatArrayOf(0f, -scaleX, offsetX + originalHeight * scaleX, scaleY, 0f, offsetY.toFloat(), 0f, 0f, 1f)
         180 -> floatArrayOf(-scaleX, 0f, offsetX + originalWidth * scaleX,
             0f, -scaleY, offsetY + originalHeight * scaleY, 0f, 0f, 1f)
         270 -> floatArrayOf(0f, scaleX, offsetX.toFloat(), -scaleY, 0f,
             offsetY + originalWidth * scaleY, 0f, 0f, 1f)
         else -> floatArrayOf(scaleX, 0f, offsetX.toFloat(), 0f, scaleY, offsetY.toFloat(), 0f, 0f, 1f)
+    }).also {
+        it[2] -= cropLeft * scaleX
+        it[5] -= cropTop * scaleY
     }
 }

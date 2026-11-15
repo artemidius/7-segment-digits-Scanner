@@ -25,6 +25,7 @@ dependencies {
     implementation(files("libs/seven-digits.aar"))
     // A bare AAR has no Maven metadata, so its runtime dependencies are explicit.
     implementation(libs.litert)
+    implementation(libs.mlkit.text)
     implementation(libs.coroutines.android)
     implementation(libs.exifinterface)
     implementation(libs.androidx.core)

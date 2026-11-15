@@ -27,6 +27,10 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Build and test the library
         run: ./gradlew :library:testDebugUnitTest :library:lintRelease :library:assembleRelease :library:publishReleasePublicationToLocalDistributionRepository --stacktrace
+      - name: Verify JitPack publication and transitive Android integration
+        run: |
+          ./gradlew :library:publishToMavenLocal -PlibraryGroup=com.github.artemidius -PlibraryArtifact=7-segment-digits-Scanner -PlibraryVersion=jitpack-ci -Dmaven.repo.local="$RUNNER_TEMP/jitpack-repository" --stacktrace
+          python3 scripts/verify_maven_consumer.py --repository "$RUNNER_TEMP/jitpack-repository" --coordinate com.github.artemidius:7-segment-digits-Scanner:jitpack-ci
       - name: Build a consumer of the actual AAR
         run: |
           python3 scripts/prepare_test_app.py --aar-only
