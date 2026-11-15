@@ -57,6 +57,13 @@ dependencies {
 }
 ```
 
+To try file integration in this repository, replace `implementation(libs.scanner)`
+in `test-app/build.gradle.kts` with the file dependency above and add the explicit
+LiteRT and ML Kit dependencies. Use either the file or JitPack declaration, not both.
+`python3 scripts/prepare_test_app.py --aar-only` can copy the locally built library
+to `test-app/libs/seven-digits.aar`; adjust the filename in the declaration accordingly.
+The default demo remains a JitPack consumer.
+
 ### Maven bundle
 
 The release `*-maven.zip` contains a Maven repository with the AAR, source JAR,
@@ -175,6 +182,6 @@ See the [complete API contract](API.md).
 
 ## Try the demo
 
-Follow [development setup](DEVELOPMENT.md). The demo consumes a copied AAR, opens
+Follow [development setup](DEVELOPMENT.md). The demo resolves the published JitPack dependency, opens
 the system gallery/camera, and displays the selected image, boxes, raw `Lines`, and
 the full visual result. It calls both APIs independently for comparison.
