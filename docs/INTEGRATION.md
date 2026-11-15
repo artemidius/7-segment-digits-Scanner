@@ -1,9 +1,46 @@
 # Integrate the library
 
 Android API 23+, Kotlin, and a compatible LiteRT detector are required. Recognition
-is offline. The library does not request Android permissions or open a camera.
+runs on-device with bundled Latin OCR; it does not need a first-use model download.
+The library does not open a camera or request camera/storage permissions. ML Kit
+may transmit SDK usage metrics; see [its terms](https://developers.google.com/ml-kit/terms).
+
+The hybrid pipeline is available in `v0.2.0-alpha.1`. The earlier `0.1.0-alpha.1`
+release retains the digits-only behavior.
 
 ## Install
+
+### JitPack (recommended)
+
+In `settings.gradle.kts`:
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url = uri("https://jitpack.io")
+            content { includeGroup("com.github.artemidius") }
+        }
+    }
+}
+```
+
+In your Android module:
+
+```kotlin
+dependencies {
+    implementation("com.github.artemidius:7-segment-digits-Scanner:v0.2.0-alpha.1")
+}
+```
+
+Keep the `v` prefix and repository-name capitalization. LiteRT, ML Kit's bundled
+Latin OCR, and core coroutines resolve transitively. If your app uses
+`Dispatchers.Main`, add `kotlinx-coroutines-android` as usual. No JitPack token is
+needed for this public library. Add your detector assets as described below;
+the dependency does not contain SMART-BP weights or the demo app.
+
 
 ### Local AAR
 
@@ -13,8 +50,9 @@ A bare AAR does not carry transitive dependency metadata:
 
 ```kotlin
 dependencies {
-    implementation(files("libs/seven-segment-digits-scanner-0.1.0-alpha.1.aar"))
+    implementation(files("libs/seven-segment-digits-scanner-0.2.0-alpha.1.aar"))
     implementation("com.google.ai.edge.litert:litert:1.4.2")
+    implementation("com.google.mlkit:text-recognition:16.0.1") // Required for the hybrid build.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 }
 ```
@@ -37,11 +75,13 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("io.github.artemidius:seven-segment-digits-scanner:0.1.0-alpha.1")
+    implementation("io.github.artemidius:seven-segment-digits-scanner:0.2.0-alpha.1")
 }
 ```
 
-These coordinates are in the downloadable bundle, **not Maven Central or JitPack**.
+The `io.github.artemidius` coordinates above belong to the downloadable Maven bundle.
+JitPack uses the separate `com.github.artemidius` coordinates and `v`-prefixed tag.
+Neither coordinate is published to Maven Central.
 Alternatively, build and publish locally with
 `./gradlew :library:publishToMavenLocal`, then add `mavenLocal()` for development.
 
@@ -70,11 +110,11 @@ import dev.sevendigits.SevenDigitsRecognizer
 // Inside a coroutine. Reuse the recognizer for subsequent photos.
 val recognizer = SevenDigitsRecognizer.create(applicationContext)
 val lines: Lines = recognizer.recognizeText(bitmap)
-// Example: listOf(listOf("126"), listOf("81"), listOf("81"))
+// Example: listOf(listOf("20", "00"), listOf("SYS.", "126"), ...)
 ```
 
 `Lines` is exactly `List<List<String>>`: rows top to bottom, fields left to right.
-Leading zeros and detected punctuation are retained. Values carry no medical,
+Printed words, units, leading zeros, and detected punctuation are retained. Values carry no medical,
 time, or date semantics. The client interprets them.
 
 For overlays and text from a single inference:
@@ -103,10 +143,19 @@ val result = recognizer.recognizeVisual(
     bitmap,
     dev.sevendigits.RecognitionOptions(
         rotationDegrees = 90, // Clockwise correction; 0, 90, 180, or 270.
-        minimumCharacterConfidence = 0.25f,
+        minimumCharacterConfidence = 0.25f, // LiteRT detector threshold only.
+        recognizePrintedText = true,
+        detectSmallCharacters = true,
     ),
 )
 ```
+
+Both new options default to `true`. For the original single-pass numeric pipeline,
+set both to `false`. Turning printed text off skips ML Kit execution but does not
+remove its packaged dependency. The default performs up to ten detector passes
+on large images plus two OCR views; disable `detectSmallCharacters` when latency matters more than
+small-character recall. OCR keeps complete words, including their low-scoring symbols;
+inspect `character.confidence` and `character.source` in the visual result.
 
 The result's boxes still refer to the supplied bitmap. Apply EXIF mirroring before
 calling the library. If the decoder already makes the image upright, use rotation 0.
@@ -117,7 +166,7 @@ calling the library. If the decoder already makes the image upright, use rotatio
   successful result with no detections; it is not an error substitute.
 - Invalid inputs/options raise `IllegalArgumentException`.
 - Always propagate `CancellationException` when catching exceptions in a coroutine.
-- The recognizer has no `close()` method. Each call releases its native interpreter
+- The recognizer has no `close()` method. Each call releases its native interpreter and OCR client
   automatically and independent calls may run concurrently.
 
 Do not treat confidence as a calibrated probability or infer completeness from a

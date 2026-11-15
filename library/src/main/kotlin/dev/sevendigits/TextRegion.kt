@@ -3,7 +3,7 @@ package dev.sevendigits
 import java.util.Collections
 
 /**
- * A spatially grouped numeric field, such as `120`, `08`, `11.11.2026`, or `11:05`.
+ * A spatially grouped word or numeric field, such as `TEMP`, `36.5`, `°C`, or `11:05`.
  *
  * [characters] must be nonempty and already in reading order in the upright image.
  * This constructor preserves that order; it does not perform detection, sorting, or grouping.

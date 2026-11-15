@@ -22,6 +22,8 @@ internal suspend fun prepareImage(bitmap: Bitmap, transform: ImageTransform): By
         } else bitmap
         val canvas = Canvas(resized)
         canvas.drawColor(Color.rgb(114, 114, 114))
+        canvas.clipRect(transform.offsetX, transform.offsetY,
+            transform.offsetX + transform.resizedWidth, transform.offsetY + transform.resizedHeight)
         val matrix = Matrix().apply { setValues(transform.drawingMatrix()) }
         canvas.drawBitmap(source, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
         val size = floatTensorBytes(transform.inputWidth, transform.inputHeight, 3)

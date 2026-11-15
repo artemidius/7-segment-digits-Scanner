@@ -1,0 +1,6 @@
+jdk:
+  - openjdk21
+before_install:
+  - bash scripts/jitpack-prepare.sh
+install:
+  - ./gradlew :library:publishToMavenLocal -PlibraryGroup="$GROUP" -PlibraryArtifact="$ARTIFACT" -PlibraryVersion="$VERSION" --no-daemon --stacktrace

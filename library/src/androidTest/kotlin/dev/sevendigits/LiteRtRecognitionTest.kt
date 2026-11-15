@@ -17,6 +17,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LiteRtRecognitionTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().context
+    private val options = RecognitionOptions(recognizePrintedText = false, detectSmallCharacters = false)
     private val expected = listOf(listOf("126"), listOf("81"), listOf("81"))
 
     @Test
@@ -27,9 +28,9 @@ class LiteRtRecognitionTest {
             val bitmap = photo(name)
             try {
                 val before = bitmap.getPixel(100, 100)
-                val visual = recognizer.recognizeVisual(bitmap)
+                val visual = recognizer.recognizeVisual(bitmap, options)
                 assertEquals(name, expected, visual.toLines())
-                assertEquals(visual.toLines(), recognizer.recognizeText(bitmap))
+                assertEquals(visual.toLines(), recognizer.recognizeText(bitmap, options))
                 assertEquals(7, visual.regions.sumOf { it.characters.size })
                 assertEquals(bitmap.width, visual.imageWidth)
                 assertEquals(bitmap.height, visual.imageHeight)
@@ -44,12 +45,12 @@ class LiteRtRecognitionTest {
         val recognizer = SevenDigitsRecognizer.create(context)
         val upright = photo("126-81-81-a.jpg")
         try {
-            val baseline = recognizer.recognizeVisual(upright)
+            val baseline = recognizer.recognizeVisual(upright, options)
             for (rotation in listOf(90, 180, 270)) {
                 val bitmap = Bitmap.createBitmap(upright, 0, 0, upright.width, upright.height,
                     Matrix().apply { postRotate(-rotation.toFloat()) }, false)
                 try {
-                    val visual = recognizer.recognizeVisual(bitmap, RecognitionOptions(rotationDegrees = rotation))
+                    val visual = recognizer.recognizeVisual(bitmap, options.copy(rotationDegrees = rotation))
                     assertEquals("Rotation $rotation", expected, visual.toLines())
                     val transform = ImageTransform(bitmap.width, bitmap.height, rotation, 640, 640)
                     baseline.regions.zip(visual.regions).forEach { (base, actual) ->
@@ -69,11 +70,11 @@ class LiteRtRecognitionTest {
         val recognizer = SevenDigitsRecognizer.create(context)
         val bitmap = photo("126-81-81-a.jpg")
         try {
-            val cancelled = launch { recognizer.recognizeText(bitmap) }
+            val cancelled = launch { recognizer.recognizeText(bitmap, options) }
             yield()
             cancelled.cancelAndJoin()
-            val first = async { recognizer.recognizeText(bitmap) }
-            val second = async { recognizer.recognizeVisual(bitmap).toLines() }
+            val first = async { recognizer.recognizeText(bitmap, options) }
+            val second = async { recognizer.recognizeVisual(bitmap, options).toLines() }
             assertEquals(expected, first.await())
             assertEquals(expected, second.await())
             assertFalse(bitmap.isRecycled)
@@ -99,9 +100,9 @@ class LiteRtRecognitionTest {
     fun blankAndRecycledImagesHaveDistinctOutcomes() = runBlocking {
         val recognizer = SevenDigitsRecognizer.create(context)
         val blank = Bitmap.createBitmap(640, 640, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
-        assertTrue(recognizer.recognizeText(blank).isEmpty())
+        assertTrue(recognizer.recognizeText(blank, options).isEmpty())
         blank.recycle()
-        try { recognizer.recognizeText(blank); fail("Expected invalid input") }
+        try { recognizer.recognizeText(blank, options); fail("Expected invalid input") }
         catch (_: IllegalArgumentException) { }
     }
 

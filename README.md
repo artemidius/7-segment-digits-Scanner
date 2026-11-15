@@ -4,19 +4,36 @@
 [![Android 23+](https://img.shields.io/badge/Android-23%2B-3DDC84)](docs/INTEGRATION.md)
 [![Apache-2.0](https://img.shields.io/badge/code-Apache--2.0-blue)](LICENSE)
 
-An offline Kotlin/Android library for reading seven-segment numeric displays from
-whole photos. Powered by LiteRT, with a small coroutine API and a gallery/camera demo.
+An on-device Kotlin/Android library for reading seven-segment displays and printed
+Latin text from whole photos. Combines LiteRT and bundled ML Kit OCR behind a small
+coroutine API, with a gallery/camera demo. No handwriting recognition is included.
+
+Install `v0.2.0-alpha.1` from [JitPack](https://jitpack.io/#artemidius/7-segment-digits-Scanner).
+Add `maven { url = uri("https://jitpack.io") }` to your dependency repositories, then:
+
+```kotlin
+implementation("com.github.artemidius:7-segment-digits-Scanner:v0.2.0-alpha.1")
+```
+
+See [integration instructions](docs/INTEGRATION.md) for repository filtering and model assets.
 
 ```kotlin
 val recognizer = SevenDigitsRecognizer.create(context)
 val lines = recognizer.recognizeText(bitmap)
-// [["126"], ["81"], ["81"]]
+// Example shape: [["20", "00"], ["SYS.", "126"], ["DIA.", "81"], ...]
 ```
 
 **Early preview · model required.** The library ships without trained weights.
-The optional research model detects digits but misses some small characters and
-has no punctuation classes. Complete-screen recognition is the goal, not a current
-accuracy guarantee. See [model capabilities and licensing](docs/MODELS.md).
+The optional research detector has no punctuation classes. General OCR adds labels,
+units, punctuation, and additional numbers. Overlapping detector crops and a second
+OCR view reduce small-character/backlight misses. Complete-screen recognition is
+the goal, not an accuracy guarantee across thermometers, meters, and sensors. See [model capabilities and licensing](docs/MODELS.md).
+
+Recognition varies by Android/OCR runtime. The clock-photo regression is verified
+on Android 14 (API 34); the Android 6 (API 23) CI emulator still misses those clock
+digits. The cause of that runtime-dependent OCR difference is not established. Numeric baseline readings and printed instrument
+text remain tested on both API levels. Do not treat successful OCR as proof that
+every character was read.
 
 ## Two APIs, one pipeline
 
@@ -25,7 +42,8 @@ accuracy guarantee. See [model capabilities and licensing](docs/MODELS.md).
   text from the same inference.
 - **Coroutines:** work runs off the caller's thread; cancellation and native cleanup
   are handled internally. No public `close()`.
-- **Whole-image input:** resizing, rotation, detection, and grouping are internal.
+- **Whole-image input:** resizing, rotation, small-character passes, duplicate removal,
+  detection, and grouping are internal.
   Returned boxes use the input bitmap's coordinates.
 
 ```kotlin
@@ -39,14 +57,14 @@ there is no date/time or medical interpretation, filtering, or guessed missing d
 
 ## Get started
 
-1. Download the model-free AAR or Maven bundle from
-   [Releases](https://github.com/artemidius/7-segment-digits-Scanner/releases), or build from source.
+1. Add the JitPack dependency, or download an AAR/Maven bundle from
+   [Releases](https://github.com/artemidius/7-segment-digits-Scanner/releases).
 2. Add a compatible, appropriately licensed model and JSON metadata to app assets.
 3. Create a recognizer in a coroutine and call either API.
 
 The [integration guide](docs/INTEGRATION.md) covers dependencies, assets, coroutine
 usage, overlays, rotation, and errors. Downloadable Maven bundles include dependency
-metadata; artifacts are not currently published to Maven Central or JitPack.
+metadata. JitPack resolves runtime dependencies automatically; Maven Central is not configured.
 
 ## Build and try the demo
 
@@ -73,7 +91,8 @@ requests no camera or storage permission.
 
 <img src="docs/images/gallery.png" alt="Demo showing a monitor photo, detected digit boxes, and nested string output" width="320">
 
-Example from a development fixture, not an accuracy benchmark.
+Screenshot of the original digits-only release. The development version also returns
+clock digits and printed labels on these fixtures; this is not an accuracy benchmark.
 [Image attribution](THIRD_PARTY_NOTICES.md#example-photos-and-screenshot).
 
 ## Quality and development
@@ -93,7 +112,10 @@ Tagged releases repeat those checks before publishing model-free artifacts and c
 
 ## License
 
-Our code is [Apache-2.0](LICENSE). Optional SMART-BP weights retain their upstream
+Our code is [Apache-2.0](LICENSE). ML Kit is a separately licensed Google SDK and
+model dependency; image recognition runs on-device, while its SDK may send usage
+metrics under [Google’s terms](https://developers.google.com/ml-kit/terms).
+Optional SMART-BP weights retain their upstream
 AGPL-3.0 terms and are not bundled in library releases. See
 [third-party notices](THIRD_PARTY_NOTICES.md). This project is independent of the
 model authors and does not claim their endorsement.

@@ -21,6 +21,7 @@ internal fun formatVisual(result: RecognitionResult): String = JSONObject().appl
             put("minimumCharacterConfidence", region.minimumCharacterConfidence.toDouble())
             put("characters", JSONArray(region.characters.map { character -> JSONObject().apply {
                 put("value", character.value.toString())
+                put("source", character.source.name)
                 put("boundingBox", character.boundingBox.json())
                 put("confidence", character.confidence.toDouble())
             } }))
