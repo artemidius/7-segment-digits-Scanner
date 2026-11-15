@@ -1,0 +1,10 @@
+name: Feature request
+description: Suggest an improvement
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: What would this enable?
+      description: Describe the use case and the API or behavior you would like.
+    validations:
+      required: true

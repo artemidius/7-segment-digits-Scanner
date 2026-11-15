@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Matrix
+import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sevendigits.internal.ImageTransform
@@ -108,9 +109,9 @@ class LiteRtRecognitionTest {
     fun preprocessingUsesRgbNormalizationGrayPaddingAndSupportsHardwareBitmaps() = runBlocking {
         val software = Bitmap.createBitmap(2, 4, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.rgb(255, 128, 0)) }
         try {
-            val hardware = software.copy(Bitmap.Config.HARDWARE, false)!!
+            val hardware = if (Build.VERSION.SDK_INT >= 26) software.copy(Bitmap.Config.HARDWARE, false) else null
             try {
-                for (bitmap in listOf(software, hardware)) {
+                for (bitmap in listOfNotNull(software, hardware)) {
                     val values = prepareImage(bitmap, ImageTransform(2, 4, 0, 4, 4)).asFloatBuffer()
                     assertEquals(114f / 255, values[0], .001f)
                     assertEquals(1f, values[3], .001f)
@@ -118,7 +119,7 @@ class LiteRtRecognitionTest {
                     assertEquals(0f, values[5], .001f)
                     assertFalse(bitmap.isRecycled)
                 }
-            } finally { hardware.recycle() }
+            } finally { hardware?.recycle() }
         } finally { software.recycle() }
     }
 

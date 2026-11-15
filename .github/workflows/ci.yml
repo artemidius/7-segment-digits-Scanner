@@ -1,0 +1,141 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, unit tests, lint, publication
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/android-build
+      - name: Test scripts
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Build and test the library
+        run: ./gradlew :library:testDebugUnitTest :library:lintRelease :library:assembleRelease :library:publishReleasePublicationToLocalDistributionRepository --stacktrace
+      - name: Build a consumer of the actual AAR
+        run: |
+          python3 scripts/prepare_test_app.py --aar-only
+          ./gradlew :test-app:assembleDebug :test-app:lintDebug --stacktrace
+      - name: Verify and package model-free distribution
+        run: python3 scripts/package_release.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: library-distribution
+          path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: build-reports
+          path: |
+            library/build/reports/
+            test-app/build/reports/
+
+  research-model:
+    name: Prepare pinned research model
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    outputs:
+      cache-key: ${{ steps.key.outputs.value }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - id: key
+        run: echo "value=smart-bp-linux-v1-${{ hashFiles('tools/model/**', 'scripts/assets.py', 'scripts/fetch_research_model.py') }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        id: model
+        with:
+          key: ${{ steps.key.outputs.value }}
+          path: |
+            models/smart-bp/detector.tflite
+            models/smart-bp/detector.json
+            models/smart-bp/MODEL_LICENSE
+            models/smart-bp/UPSTREAM_README.md
+            models/smart-bp/upstream.zip
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        if: steps.model.outputs.cache-hit != 'true'
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tools/model/requirements.txt
+      - name: Convert the opt-in AGPL research model
+        if: steps.model.outputs.cache-hit != 'true'
+        env:
+          OMP_NUM_THREADS: '2'
+          TF_NUM_INTRAOP_THREADS: '2'
+          TF_NUM_INTEROP_THREADS: '2'
+          YOLO_AUTOINSTALL: 'false'
+        run: |
+          python -m pip install torch==2.15.0 torchvision==0.29.2 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r tools/model/requirements.txt
+          python scripts/fetch_research_model.py --accept-agpl
+          python tools/model/convert_detector.py models/smart-bp/SMART-BP_Weights.pt --output models/smart-bp
+
+  device-tests:
+    name: Android ${{ matrix.api }} device tests
+    needs: research-model
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [23, 34]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/android-build
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          key: ${{ needs.research-model.outputs.cache-key }}
+          fail-on-cache-miss: true
+          path: |
+            models/smart-bp/detector.tflite
+            models/smart-bp/detector.json
+            models/smart-bp/MODEL_LICENSE
+            models/smart-bp/UPSTREAM_README.md
+            models/smart-bp/upstream.zip
+      - name: Prepare real inference assets and AAR consumer
+        run: |
+          ./gradlew :library:assembleRelease --stacktrace
+          python3 scripts/prepare_test_app.py
+          python3 scripts/prepare_instrumentation_assets.py
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -camera-back emulated
+          script: ./gradlew :library:connectedDebugAndroidTest :test-app:connectedDebugAndroidTest --stacktrace
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: android-${{ matrix.api }}-reports
+          path: |
+            library/build/reports/androidTests/
+            library/build/outputs/androidTest-results/
+            test-app/build/reports/androidTests/
+            test-app/build/outputs/androidTest-results/
+          # Do not upload model-bearing APKs as distribution artifacts.

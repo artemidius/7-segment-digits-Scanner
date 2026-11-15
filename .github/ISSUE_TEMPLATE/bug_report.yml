@@ -1,0 +1,22 @@
+name: Bug report
+description: Report a library or demo problem
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+      description: Include steps to reproduce and the relevant API call.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Library version, Android version, device, model source/hash, and options.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs or example image
+      description: Remove personal information. Share only images you own or may redistribute.
