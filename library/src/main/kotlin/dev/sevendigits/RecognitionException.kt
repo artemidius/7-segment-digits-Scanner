@@ -2,7 +2,7 @@ package dev.sevendigits
 
 /**
  * Operational recognition failure, such as unavailable model resources or failed inference.
- * Invalid caller arguments and closed recognizers use standard argument/state exceptions instead.
+ * Invalid caller arguments use [IllegalArgumentException] instead.
  * Coroutine cancellation must propagate unchanged and must never be wrapped in this exception.
  *
  * @param message Diagnostic description; not intended as user-facing or machine-parsed text.

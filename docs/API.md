@@ -11,15 +11,13 @@ The test app remains an empty activity.
 ## Entry point
 
 ```kotlin
-interface SevenDigitsRecognizer : java.io.Closeable {
+interface SevenDigitsRecognizer {
     val supportedCharacters: Set<Char>
 
     suspend fun recognize(
         bitmap: android.graphics.Bitmap,
         options: RecognitionOptions = RecognitionOptions(),
     ): RecognitionResult
-
-    override fun close()
 }
 ```
 
@@ -85,13 +83,16 @@ list means nothing met the detection criteria. Partial results are also possible
 
 ## Execution and failures
 
-The runtime implementation must make `recognize` safe to call from the main thread
-by moving expensive work off that thread, and serialize concurrent calls on one
-instance. A `suspend` declaration alone does not provide either behavior; these
-are requirements for the forthcoming implementation.
+The calling coroutine owns each recognition operation. Calls are independent and
+may run concurrently on the same recognizer. The runtime implementation must move
+expensive work off the calling thread, including when called from the main thread.
+It must use structured concurrency, keep inference resources local to the call,
+and release them in `finally` on completion, failure, or cancellation. It must
+finish its child work before returning and must not use detached background jobs.
+A `suspend` declaration alone does not provide this behavior; these are requirements
+for the forthcoming implementation.
 
 - Invalid options, result values, or unreadable/recycled input: `IllegalArgumentException`.
-- Recognition attempted after closing: `IllegalStateException`.
 - Operational failures, including inference/model resource failures: `RecognitionException`.
 - Coroutine cancellation: propagate cancellation unchanged; never return empty success
   or wrap it as `RecognitionException`. A native invocation may finish before the
@@ -101,14 +102,16 @@ Catch `RecognitionException` for recognition failures; diagnostic messages are n
 a stable machine-readable code or user-facing copy. Empty detections are ordinary
 successful results, distinct from failures.
 
-The owner closes the recognizer after pending calls finish. If cancelling, await
-their completion first. `close()` is idempotent; it must not race with recognition.
-The bitmap remains caller-owned throughout.
+For example, recognition can run inside `viewModelScope.launch { ... }`; cancellation
+of that coroutine also cancels recognition. The native invocation may need to
+finish before resources can safely be released. The bitmap remains caller-owned:
+after cancelling a job, await its completion before modifying or recycling it.
+The recognizer remains reusable; there is no manual shutdown step.
 
 ## Verification
 
 Unit tests cover preservation of whole-display strings, reading order after rotation,
 small punctuation bounds, minimum scores, defensive collection snapshots, empty
 detections, image boundaries, and invalid/non-finite values. Runtime scheduling,
-cancellation, lifecycle, coordinate transformation, and OCR accuracy will be tested
+cancellation, resource cleanup, coordinate transformation, and OCR accuracy will be tested
 when the implementation exists; the current tests do not claim to verify inference.
