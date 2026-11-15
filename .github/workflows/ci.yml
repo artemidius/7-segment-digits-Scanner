@@ -31,10 +31,8 @@ jobs:
         run: |
           ./gradlew :library:publishToMavenLocal -PlibraryGroup=com.github.artemidius -PlibraryArtifact=7-segment-digits-Scanner -PlibraryVersion=jitpack-ci -Dmaven.repo.local="$RUNNER_TEMP/jitpack-repository" --stacktrace
           python3 scripts/verify_maven_consumer.py --repository "$RUNNER_TEMP/jitpack-repository" --coordinate com.github.artemidius:7-segment-digits-Scanner:jitpack-ci
-      - name: Build a consumer of the actual AAR
-        run: |
-          python3 scripts/prepare_test_app.py --aar-only
-          ./gradlew :test-app:assembleDebug :test-app:lintDebug --stacktrace
+      - name: Build the demo against the published JitPack library
+        run: ./gradlew :test-app:assembleDebug :test-app:lintDebug --stacktrace
       - name: Verify and package model-free distribution
         run: python3 scripts/package_release.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -115,9 +113,8 @@ jobs:
             models/smart-bp/MODEL_LICENSE
             models/smart-bp/UPSTREAM_README.md
             models/smart-bp/upstream.zip
-      - name: Prepare real inference assets and AAR consumer
+      - name: Prepare real inference assets for library and published-library demo tests
         run: |
-          ./gradlew :library:assembleRelease --stacktrace
           python3 scripts/prepare_test_app.py
           python3 scripts/prepare_instrumentation_assets.py
       - name: Enable KVM

@@ -1,4 +1,5 @@
 [versions]
+scanner = "v0.2.0-alpha.1"
 agp = "9.5.1"
 compileSdk = "37"
 targetSdk = "37"
@@ -13,6 +14,7 @@ exifinterface = "1.4.2"
 androidxCore = "1.17.0"
 
 [libraries]
+scanner = { module = "com.github.artemidius:7-segment-digits-Scanner", version.ref = "scanner" }
 mlkit-text = { module = "com.google.mlkit:text-recognition", version.ref = "mlkitText" }
 junit = { module = "junit:junit", version.ref = "junit" }
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }

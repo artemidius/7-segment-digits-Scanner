@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
-import android.util.TypedValue
 import android.view.View
 import dev.sevendigits.BoundingBox
 import dev.sevendigits.RecognitionResult
@@ -19,11 +18,6 @@ class RecognitionImageView(context: Context, attrs: AttributeSet? = null) : View
     private val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val drawingRect = RectF()
     private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 14f, resources.displayMetrics)
-    }
-    private val labelBackground = Paint().apply { color = Color.rgb(36, 87, 197) }
 
     var showBoxes: Boolean = true
         set(value) { field = value; invalidate() }
@@ -58,24 +52,10 @@ class RecognitionImageView(context: Context, attrs: AttributeSet? = null) : View
             boxPaint.color = Color.rgb(215, 108, 0)
             boxPaint.strokeWidth = density
             region.characters.forEach { canvas.drawRect(rect(it.boundingBox), boxPaint) }
-            boxPaint.color = labelBackground.color
+            boxPaint.color = Color.rgb(36, 87, 197)
             boxPaint.strokeWidth = 2 * density
-            val bounds = rect(region.boundingBox)
-            canvas.drawRect(bounds, boxPaint)
-            val padding = 3 * density
-            val labelWidth = labelPaint.measureText(region.text) + padding * 2
-            val labelHeight = labelPaint.fontSpacing + padding * 2
-            // Prefer the side of a field so labels do not cover the digits in adjacent rows.
-            val beside = bounds.left >= labelWidth + padding || bounds.right + padding + labelWidth <= width
-            val x = when {
-                bounds.left >= labelWidth + padding -> bounds.left - labelWidth - padding
-                bounds.right + padding + labelWidth <= width -> bounds.right + padding
-                else -> bounds.left.coerceIn(0f, (width - labelWidth).coerceAtLeast(0f))
-            }
-            val y = (if (beside) bounds.centerY() - labelHeight / 2 else bounds.top - labelHeight)
-                .coerceIn(0f, (height - labelHeight).coerceAtLeast(0f))
-            canvas.drawRect(x, y, x + labelWidth, y + labelHeight, labelBackground)
-            canvas.drawText(region.text, x + padding, y + padding - labelPaint.fontMetrics.top, labelPaint)
+            canvas.drawRect(rect(region.boundingBox), boxPaint)
+            // Text is listed below the image; floating labels obscure dense displays.
         }
     }
 }

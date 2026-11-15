@@ -71,12 +71,10 @@ metadata. JitPack resolves runtime dependencies automatically; Maven Central is 
 JDK 21, Android SDK 37.0, build-tools 36.0.0, and Python 3 are recommended.
 
 ```sh
-./gradlew :library:assembleRelease
-python3 scripts/prepare_test_app.py --aar-only
 ./gradlew :test-app:assembleDebug
 ```
 
-This builds the library and a model-free demo from a fresh checkout. For working
+This builds the demo against the published JitPack library from a fresh checkout. For working
 recognition, follow [model setup](docs/MODELS.md), then run:
 
 ```sh
@@ -84,20 +82,22 @@ python3 scripts/prepare_test_app.py
 ./gradlew :test-app:installDebug
 ```
 
-The demo imports the actual AAR file. Gallery and Camera return to one screen with
+The demo imports `v0.2.0-alpha.1` from JitPack through Gradle. Gallery and Camera return to one screen with
 the photo, optional bounding boxes, raw `Lines`, and the detailed visual result.
 Camera uses the system camera app with temporary access to one photo; the demo
 requests no camera or storage permission.
 
-<img src="docs/images/gallery.png" alt="Demo showing a monitor photo, detected digit boxes, and nested string output" width="320">
+<img src="docs/images/gallery.png" alt="JitPack demo recognizing clock digits, readings, printed labels and units, with bounding boxes and raw Lines" width="400">
 
-Screenshot of the original digits-only release. The development version also returns
-clock digits and printed labels on these fixtures; this is not an accuracy benchmark.
+Actual output from the JitPack `v0.2.0-alpha.1` demo on Android 14: the clock,
+main readings, printed labels, units, and button text are included. The clock is
+returned as `2001`; some symbols are missed or misread. This example is not an
+accuracy benchmark. [Capture details and raw output](docs/images/README.md) ·
 [Image attribution](THIRD_PARTY_NOTICES.md#example-photos-and-screenshot).
 
 ## Quality and development
 
-CI builds the library and AAR consumer, runs JVM/Python tests and Android lint,
+CI builds the library, a consumer of its Maven publication, and the JitPack demo; it runs JVM/Python tests and Android lint,
 verifies release contents, and exercises real-model inference on Android 23 and 34.
 Tagged releases repeat those checks before publishing model-free artifacts and checksums.
 

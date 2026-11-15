@@ -45,3 +45,4 @@ Their MIT license is retained at [third_party/bp-tracker/LICENSE](third_party/bp
 The fixture downloader verifies pinned SHA-256 hashes and copies the license into
 the test assets. The screenshot was captured from our demo on an Android emulator;
 its recognition output is an example, not an accuracy benchmark.
+[Capture provenance and reproduction](docs/images/README.md) include the exact raw output.
