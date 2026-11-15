@@ -3,23 +3,46 @@
 Package: `dev.sevendigits`. This is an initial 0.1 API contract, subject to refinement
 before a stable release. All public declarations have KDoc and explicit visibility/types.
 
-**Implemented now:** the recognizer interface, options, exception, and immutable,
-validated result types. **Next:** a concrete recognizer, creation/loading API,
+**Implemented now:** the two recognition entry points, text projection, options,
+exception, and immutable, validated visual result types. **Next:** a concrete recognizer, creation/loading API,
 and LiteRT integration. This artifact cannot yet perform image recognition.
 The test app remains an empty activity.
 
-## Entry point
+## Two entry points
 
 ```kotlin
+typealias Lines = List<List<String>>
+
 interface SevenDigitsRecognizer {
     val supportedCharacters: Set<Char>
 
-    suspend fun recognize(
+    suspend fun recognizeText(
+        bitmap: android.graphics.Bitmap,
+        options: RecognitionOptions = RecognitionOptions(),
+    ): Lines
+
+    suspend fun recognizeVisual(
         bitmap: android.graphics.Bitmap,
         options: RecognitionOptions = RecognitionOptions(),
     ): RecognitionResult
 }
 ```
+
+`recognizeText` returns only rows of strings. Each string is a detected field,
+such as `"120"` or `"11:05"`, not an individual character. The outer list orders
+rows top to bottom; each inner list orders fields left to right. Both orders refer
+to the upright image. This is exactly `List<List<String>>`, with no wrapper object
+or visual metadata. Returned lists are immutable at both levels.
+
+`recognizeVisual` returns the detailed `RecognitionResult`. Its `lines` property
+holds the same grouping as `List<List<TextRegion>>`; `regions` flattens the fields
+for drawing overlays. `visual.toLines()` projects those rows to strings without
+running inference again, sorting by original-image coordinates, or joining fields.
+
+The default `recognizeText` implementation calls `recognizeVisual` once and returns
+`toLines()`. Both paths therefore share detection, options, grouping, and errors.
+To obtain both representations, call `recognizeVisual` and then `toLines()`;
+calling both entry points separately performs two recognition operations.
 
 Input is the **whole photo** as a bitmap. Detection, scaling, character recognition,
 and grouping belong inside the implementation. Callers do not crop individual digits.
@@ -50,9 +73,10 @@ right/bottom edges. They have positive area and stay inside the image boundaries
 Regions and their characters follow **upright reading order**, which can differ
 from coordinate order in a rotated original bitmap.
 
-## Output
+## Visual output
 
-`RecognitionResult.regions` is an immutable list of `TextRegion` instances. A region
+`RecognitionResult.lines` is an immutable list of immutable rows of `TextRegion`
+instances. Rows must be nonempty; no detections is an empty outer list. A region
 contains an immutable list of `RecognizedCharacter` values; it derives:
 
 - `text`: the exact character sequence, preserving signs, punctuation, and leading zeros.
@@ -64,14 +88,14 @@ symbols in the API are `0–9`, `.`, `,`, `:`, `-`, `/`, and `+`. Each model sup
 its own subset. Scores are model-dependent and are not calibrated probabilities
 that a character or an entire field is correct.
 
-For the example display, possible region texts would be:
+For an image with three rows containing these fields, the text API would return:
 
-```text
-120
-80
-65
-11.11.2026
-11:05
+```kotlin
+listOf(
+    listOf("120"),
+    listOf("80", "65"),
+    listOf("11.11.2026", "11:05"),
+)
 ```
 
 This illustrates the data format, not current model performance. The research
@@ -79,7 +103,8 @@ SMART-BP baseline still misses clock digits and lacks punctuation classes.
 
 The API does not assign SYS/DIA/pulse labels, convert strings to numbers or dates,
 insert missing characters, or claim a reading is complete. A successful empty
-list means nothing met the detection criteria. Partial results are also possible.
+outer list means nothing met the detection criteria. Partial results are also possible.
+Empty rows and placeholder strings are not inserted to represent gaps or missed content.
 
 ## Execution and failures
 
@@ -110,8 +135,9 @@ The recognizer remains reusable; there is no manual shutdown step.
 
 ## Verification
 
-Unit tests cover preservation of whole-display strings, reading order after rotation,
-small punctuation bounds, minimum scores, defensive collection snapshots, empty
+Unit tests cover multiple fields per row, separate rows, exact string preservation,
+reading order after rotation, small punctuation bounds, minimum scores, defensive
+collection snapshots and text projection at both list levels, empty
 detections, image boundaries, and invalid/non-finite values. Runtime scheduling,
 cancellation, resource cleanup, coordinate transformation, and OCR accuracy will be tested
 when the implementation exists; the current tests do not claim to verify inference.

@@ -3,10 +3,11 @@ package dev.sevendigits
 import java.util.Collections
 
 /**
- * Successful recognition output for one whole input bitmap.
+ * Detailed visual recognition output for one whole input bitmap.
  *
- * No detections is represented by an empty [regions] list. Processing failures are exceptions,
- * never an empty success. This constructor checks dimensions and bounds but does not sort regions.
+ * [lines] contains the detected row grouping. No detections is an empty outer list; each
+ * detected row must contain at least one field. Processing failures are exceptions, never
+ * an empty success. This constructor checks dimensions and bounds but does not group or sort.
  *
  * @property imageWidth Width of the original bitmap, before processing rotation or resize.
  * @property imageHeight Height of the original bitmap, before processing rotation or resize.
@@ -14,15 +15,29 @@ import java.util.Collections
 public class RecognitionResult(
     public val imageWidth: Int,
     public val imageHeight: Int,
-    regions: List<TextRegion>,
+    lines: List<List<TextRegion>>,
 ) {
-    /** Immutable snapshot in upright reading order: rows top to bottom, fields left to right. */
-    public val regions: List<TextRegion> = Collections.unmodifiableList(ArrayList(regions))
+    /** Immutable rows, top to bottom, containing immutable lists of fields, left to right. */
+    public val lines: List<List<TextRegion>> = Collections.unmodifiableList(
+        lines.map { Collections.unmodifiableList(ArrayList(it)) },
+    )
+
+    /** All fields flattened in upright reading order, convenient for drawing overlays. */
+    public val regions: List<TextRegion> = Collections.unmodifiableList(this.lines.flatten())
 
     init {
         require(imageWidth > 0 && imageHeight > 0) { "Image dimensions must be positive." }
+        require(this.lines.all { it.isNotEmpty() }) { "Detected rows must contain at least one field." }
         require(this.regions.all { it.boundingBox.right <= imageWidth && it.boundingBox.bottom <= imageHeight }) {
             "Every region must fit within the original image dimensions."
         }
     }
+
+    /**
+     * Returns just the strings with the existing row/field grouping, without running inference
+     * again. Both list levels are immutable. Coordinates and scores are omitted.
+     */
+    public fun toLines(): Lines = Collections.unmodifiableList(
+        lines.map { row -> Collections.unmodifiableList(row.map { it.text }) },
+    )
 }
