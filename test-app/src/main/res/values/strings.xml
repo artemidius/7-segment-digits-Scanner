@@ -1,11 +1,15 @@
 <resources>
     <string name="app_name">7-Digits Test App</string>
     <string name="screen_title">7-Digits</string>
-    <string name="screen_subtitle">Choose a photo of a device display.</string>
+    <string name="screen_subtitle">Choose or take a photo of a device display.</string>
     <string name="gallery">Gallery</string>
     <string name="camera">Camera</string>
-    <string name="camera_unavailable">Camera — coming later</string>
-    <string name="initial_status">Pick an image to see both recognition outputs. Camera is not available yet.</string>
+    <string name="camera_unavailable">No camera app is available. You can choose a photo from Gallery.</string>
+    <string name="camera_blocked">Camera access was blocked. Check permissions for your camera app in Settings, then try again. Gallery is still available.</string>
+    <string name="camera_failed">Could not prepare a photo. Check available storage and try again.</string>
+    <string name="camera_cancelled">Capture cancelled. Your previous result is unchanged.</string>
+    <string name="camera_empty">The camera did not save a photo. Please try again.</string>
+    <string name="initial_status">Choose Gallery or Camera to see both recognition outputs.</string>
     <string name="loading">Loading image…</string>
     <string name="recognizing">Reading display…</string>
     <string name="complete">Done · Image: %1$d × %2$d · Fields: %3$d</string>

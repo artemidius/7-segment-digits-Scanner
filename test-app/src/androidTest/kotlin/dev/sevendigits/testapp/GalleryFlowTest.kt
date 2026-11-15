@@ -34,7 +34,7 @@ class GalleryFlowTest {
         try {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 scenario.onActivity { activity ->
-                    assertFalse(activity.findViewById<Button>(R.id.camera).isEnabled)
+                    assertTrue(activity.findViewById<Button>(R.id.camera).isEnabled)
                     activity.onActivityResult(100, Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))
                 }
                 waitForEmptyResult(scenario)

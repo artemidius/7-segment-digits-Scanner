@@ -5,7 +5,7 @@ Standalone Android project for the 7-Digits library and its test app.
 | Module | Purpose |
 | --- | --- |
 | `:library` | Android library, published as a release AAR with sources and Maven metadata. |
-| `:test-app` | Gallery demo consuming a local `.aar`; shows the image, boxes, and both API outputs. |
+| `:test-app` | Gallery/camera demo consuming a local `.aar`; shows the image, boxes, and both API outputs. |
 
 The library implements both recognition APIs with a private, coroutine-based
 LiteRT CPU pipeline. Supply a compatible model and label metadata as app assets.
@@ -90,7 +90,7 @@ Kotlin support is built into Android Gradle Plugin 9.5.1. Versions are defined i
 The runtime uses LiteRT 1.4.2's CPU Interpreter and kotlinx.coroutines 1.11.0;
 these implementation dependencies are included in the published Maven metadata.
 
-## Gallery test app
+## Gallery and camera test app
 
 The app uses `implementation(files("libs/seven-digits.aar"))`, with no dependency
 on the library Gradle project. Because a bare AAR carries no dependency metadata,
@@ -118,7 +118,23 @@ adb shell am start -n dev.sevendigits.testapp/.MainActivity
   The sample calls both APIs independently to exercise them; it does not parse or
   label their values. Application code that needs both views can instead use
   `recognizeVisual(...).toLines()` to avoid a second inference.
-- **Camera** is visible and disabled for this stage.
+- **Camera** opens the device's camera app. After confirming the shot, the saved
+  photo goes through the same decoder and both recognition APIs. Cancelling leaves
+  the previous image and outputs intact. Missing/blocked camera apps and empty
+  captures show a message and keep Gallery available.
+
+Camera capture uses `ACTION_IMAGE_CAPTURE`, so this app deliberately declares no
+`CAMERA`, microphone, or storage permission. The camera app manages its own camera
+permissions and privacy controls, as recommended by
+[Android's permission guidance](https://developer.android.com/privacy-and-security/minimize-permission-requests#take-photo).
+An unexported FileProvider shares just the new photo's URI with temporary read/write
+access. The app revokes that access when capture returns or fails. Only the private
+`cache/captures/` directory can be shared; model assets and other app files are not exposed.
+The pending file name survives activity/process recreation through saved state.
+Cancelled/empty captures are deleted, and a previous captured photo is deleted after
+its recognition finishes when another image replaces it. The current photo remains
+in app cache for recreation, subject to Android's normal cache cleanup; it is not
+automatically saved to the public gallery.
 
 Image loading and recognition run off the main thread. Large images are sampled
 to a maximum side of 2048 pixels and EXIF rotation/mirroring is applied before
@@ -133,10 +149,15 @@ still contains no model. Run app tests with `./gradlew :test-app:connectedDebugA
 after preparing the AAR/model and connecting an emulator/device.
 
 Verified on Android 14 / API 34: a photo selected through the actual system picker
-displayed `[["126"], ["81"], ["81"]]` and matching visual boxes/details. Three app
+displayed `[["126"], ["81"], ["81"]]` and matching visual boxes/details. Six app
 instrumentation tests passed, covering empty results through both APIs, picker
 cancellation, activity recreation, all eight EXIF orientations, bounded large-image
-decoding, and invalid image rejection.
+decoding, invalid image rejection, full-photo camera results with null Intent data,
+camera cancellation/empty output, blocked or missing camera apps, file cleanup,
+manifest permissions, and FileProvider scope. Camera intent interception tests run
+on API 26+; the app still supports API 23. A separate manual check used the emulator's
+camera app to take and confirm a photo after killing the test-app process while
+capture was open; the restored app successfully displayed the photo and both outputs.
 
 ## Android integration tests
 
