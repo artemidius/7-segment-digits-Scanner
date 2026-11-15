@@ -8,7 +8,7 @@
 - Android API 23+ device/emulator for instrumentation tests.
 
 Set `ANDROID_HOME` or let Android Studio generate ignored `local.properties`.
-The wrapper pins Gradle 9.9.0 and its distribution checksum; AGP 9.5.1 supplies
+The wrapper pins Gradle 9.9.1 and its distribution checksum; AGP 9.5.1 supplies
 built-in Kotlin support. A system Gradle installation is unnecessary.
 
 ## Fresh checkout: library and model-free app

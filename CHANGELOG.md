@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Update pinned GitHub Actions, Gradle to 9.9.1, and demo AndroidX Core to 1.19.1.
+- Verify CI distribution upload/download with the same action used by releases.
+
 - Make the demo consume the pinned JitPack release, retaining manual AAR integration instructions.
 - Refresh the README with whole-photo hybrid OCR output and a reproducible screenshot capture.
 - Keep dense display previews readable by drawing boxes without floating text labels.
