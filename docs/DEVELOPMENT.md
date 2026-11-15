@@ -18,14 +18,19 @@ git clone https://github.com/artemidius/7-segment-digits-Scanner.git
 cd 7-segment-digits-Scanner
 ./gradlew :library:testDebugUnitTest :library:lintRelease :library:assembleRelease
 python3 -m unittest discover -s scripts -p 'test_*.py'
-python3 scripts/prepare_test_app.py --aar-only
 ./gradlew :test-app:assembleDebug :test-app:lintDebug
 ```
 
-The demo imports `test-app/libs/seven-digits.aar`, **not** `project(":library")`.
-After changing the library, rebuild its release AAR and rerun preparation.
-`--aar-only` permits a clean build without downloading any model; recognition then
-needs model assets. This flag does not remove any model assets already installed.
+The demo resolves `com.github.artemidius:7-segment-digits-Scanner:v0.2.0-alpha.1`
+from JitPack. Its pinned version is `scanner` in `gradle/libs.versions.toml`.
+No copied AAR or local library build is required. Model assets are still required
+for recognition; `prepare_test_app.py` now prepares those assets by default.
+
+Changes to `:library` do not change the pinned demo dependency. Run library tests
+for local engine changes, then update the demo's version after publishing a release.
+For manual file integration, see [Local AAR](INTEGRATION.md#local-aar). The optional
+`prepare_test_app.py --aar-only` still copies a built AAR; it does not switch the
+demo's Gradle declaration away from JitPack.
 
 ## Working demo and real-model tests
 
@@ -51,7 +56,7 @@ preview use that bitmap, so the result coordinates refer to the decoded image.
 Captured files stay in private app cache, not the public gallery. Cancelled/empty
 captures and replaced captures are removed. Cache may be cleared by Android.
 
-Generated AAR/app model inputs survive `clean`; library test assets live under
+Prepared app model assets survive `clean`; library test assets live under
 `library/build/test-assets/` and must be prepared again afterwards. Fixture downloads
 are pinned to a public MIT-licensed revision and verified by SHA-256. Use
 `--photos /path/to/bp-tracker/test/fixtures` for local copies plus the upstream license.
@@ -65,7 +70,7 @@ broken certificate setup; repair its CA configuration or use a configured Python
 | JVM tests | Result contracts, immutable snapshots, NMS, mixed-text merging, crop geometry, cancellation and cleanup |
 | 4 Python tests | Model/download integrity and rejection of corrupt assets |
 | Library device tests | Numeric baseline, hybrid clock/label regressions, printed meter/sensor text, rotations, cancellation, invalid models, bitmap formats |
-| App device tests | Hybrid AAR gallery output, gallery/camera results, lifecycle, permissions, cancellation, errors, EXIF, bounded decoding |
+| App device tests | Published JitPack gallery output, gallery/camera results, lifecycle, permissions, cancellation, errors, EXIF, bounded decoding |
 
 Camera intent-interception tests require API 26+. The exact clock fixture regression
 runs on API 34+, where recovery was verified; API 23 misses those clocks and this
@@ -77,7 +82,8 @@ These are implementation checks, not broad model-accuracy evidence.
 ## CI and releases
 
 CI runs on pushes to `main`, pull requests, and manual dispatch. It checks unit
-tests, lint, a consumer of the actual AAR, and publication contents. A separate job
+tests, lint, a consumer of the current Maven publication, the pinned JitPack demo,
+and publication contents. A separate job
 fetches/converts the pinned AGPL research model and caches it with the complete
 upstream archive and notices. Android 23 and 34 jobs exercise real inference.
 Only reports and model-free library artifacts are uploaded for distribution.
@@ -100,7 +106,7 @@ and SHA-256 checksums. No model-bearing APK is published automatically.
 JitPack separately builds tagged source using `jitpack.yml`, Java 21, and the
 required Android SDK packages. It runs only `:library:publishToMavenLocal` with
 JitPack's `GROUP`, `ARTIFACT`, and `VERSION` coordinates; it does not fetch a model
-or require the demo's local AAR. CI checks the same publication shape by compiling
+or require demo assets. CI checks the same publication shape by compiling
 an independent Android consumer with only the published dependency.
 
 After tagging, request the version on JitPack and verify the actual hosted artifact:

@@ -22,10 +22,8 @@ android {
 }
 
 dependencies {
-    implementation(files("libs/seven-digits.aar"))
-    // A bare AAR has no Maven metadata, so its runtime dependencies are explicit.
-    implementation(libs.litert)
-    implementation(libs.mlkit.text)
+    implementation(libs.scanner)
+    // Main dispatcher is used by the app; LiteRT and ML Kit come from the scanner's metadata.
     implementation(libs.coroutines.android)
     implementation(libs.exifinterface)
     implementation(libs.androidx.core)

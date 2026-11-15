@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Make the demo consume the pinned JitPack release, retaining manual AAR integration instructions.
+- Refresh the README with whole-photo hybrid OCR output and a reproducible screenshot capture.
+- Keep dense display previews readable by drawing boxes without floating text labels.
+
 ## 0.2.0-alpha.1
 
 - Add JitPack delivery with transitive runtime dependencies and an Android consumer check.
