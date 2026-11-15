@@ -1,6 +1,7 @@
 # Integrate the library
 
-Android API 23+, Kotlin, and a compatible LiteRT detector are required. Recognition
+Current source (`0.3.0-alpha.1`) requires Android API 24+, Kotlin 2.4, and a compatible LiteRT detector.
+The published `v0.2.0-alpha.1` examples below retain API 23 support. Recognition
 runs on-device with bundled Latin OCR; it does not need a first-use model download.
 The library does not open a camera or request camera/storage permissions. ML Kit
 may transmit SDK usage metrics; see [its terms](https://developers.google.com/ml-kit/terms).
@@ -42,10 +43,47 @@ needed for this public library. Add your detector assets as described below;
 the dependency does not contain SMART-BP weights or the demo app.
 
 
+### Upgrading to 0.3.0-alpha.1
+
+The current source targets the next release; it is not yet available as a JitPack tag.
+It uses LiteRT 2.3.2 and requires **Android 7+ (`minSdk = 24`)** and **Kotlin 2.4**.
+Both published LiteRT 2.3.2 AAR manifests declare API 24, even though the upstream
+version table lists API 23. Do not override the manifest requirement.
+
+For AGP 9 built-in Kotlin, use this in your root `build.gradle.kts` (tested with
+AGP 9.5.1, Gradle 9.9.1, and Kotlin 2.4.21):
+
+```kotlin
+buildscript {
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
+    }
+}
+```
+
+Keep built-in Kotlin enabled. The public scanner API is unchanged; its internal
+CPU Interpreter API remains supported by LiteRT 2.3.2. No GPU/NPU backend is enabled.
+
+If building this source as a local AAR, use the new runtime version explicitly:
+
+```kotlin
+dependencies {
+    implementation(files("libs/seven-digits.aar"))
+    implementation("com.google.ai.edge.litert:litert:2.3.2")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+}
+```
+
+The pinned JitPack demo continues to use `v0.2.0-alpha.1` until the new release is
+published; library device tests and the Maven consumer check exercise current source.
+
 ### Local AAR
 
 Download the AAR from [Releases](https://github.com/artemidius/7-segment-digits-Scanner/releases)
 or build `:library:assembleRelease`. Copy it into your app's `libs/` directory.
+The example below is for the published 0.2 release; source builds use the
+[new runtime requirements above](#upgrading-to-030-alpha1).
 A bare AAR does not carry transitive dependency metadata:
 
 ```kotlin

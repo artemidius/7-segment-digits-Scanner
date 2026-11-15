@@ -9,7 +9,7 @@ That license does not replace licenses on models, dependencies, or third-party i
   [Google ML Kit Terms & Privacy](https://developers.google.com/ml-kit/terms).
   This dependency is not covered by our Apache-2.0 license. Image/text processing
   stays on-device; the SDK may transmit usage/performance metrics.
-- Google LiteRT 1.4.2 — Apache-2.0: https://github.com/google-ai-edge/LiteRT
+- Google LiteRT 2.3.2 (current source; published 0.2 uses 1.4.2) — Apache-2.0: https://github.com/google-ai-edge/LiteRT
 - Kotlin and kotlinx.coroutines — Apache-2.0: https://github.com/Kotlin/kotlinx.coroutines
 - AndroidX Core and ExifInterface (demo app) — Apache-2.0: https://android.googlesource.com/platform/frameworks/support/
 

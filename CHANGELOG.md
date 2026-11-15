@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-alpha.1 (unreleased)
+
+- Upgrade LiteRT to 2.3.2 and AGP's built-in Kotlin compiler to 2.4.21.
+- Require Android 7+ (API 24), matching the published LiteRT AAR manifests.
+- Keep the public coroutine APIs and CPU Interpreter pipeline unchanged.
+- Test the current library and published Maven consumer with the new compiler/runtime.
 
 - Update pinned GitHub Actions, Gradle to 9.9.1, and demo AndroidX Core to 1.19.1.
 - Verify CI distribution upload/download with the same action used by releases.

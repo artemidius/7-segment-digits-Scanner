@@ -1,12 +1,16 @@
 # 7-Segment Digits Scanner
 
 [![CI](https://github.com/artemidius/7-segment-digits-Scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/artemidius/7-segment-digits-Scanner/actions/workflows/ci.yml)
-[![Android 23+](https://img.shields.io/badge/Android-23%2B-3DDC84)](docs/INTEGRATION.md)
+[![Android 24+](https://img.shields.io/badge/Android-24%2B-3DDC84)](docs/INTEGRATION.md)
 [![Apache-2.0](https://img.shields.io/badge/code-Apache--2.0-blue)](LICENSE)
 
 An on-device Kotlin/Android library for reading seven-segment displays and printed
 Latin text from whole photos. Combines LiteRT and bundled ML Kit OCR behind a small
 coroutine API, with a gallery/camera demo. No handwriting recognition is included.
+
+**Current source / next release (`0.3.0-alpha.1`):** Android 7+ (API 24), Kotlin 2.4,
+and LiteRT 2.3.2. The published `v0.2.0-alpha.1` release below still supports API 23
+and uses LiteRT 1.4.2. See [upgrade requirements](docs/INTEGRATION.md#upgrading-to-030-alpha1).
 
 Install `v0.2.0-alpha.1` from [JitPack](https://jitpack.io/#artemidius/7-segment-digits-Scanner).
 Add `maven { url = uri("https://jitpack.io") }` to your dependency repositories, then:
@@ -29,11 +33,11 @@ units, punctuation, and additional numbers. Overlapping detector crops and a sec
 OCR view reduce small-character/backlight misses. Complete-screen recognition is
 the goal, not an accuracy guarantee across thermometers, meters, and sensors. See [model capabilities and licensing](docs/MODELS.md).
 
-Recognition varies by Android/OCR runtime. The clock-photo regression is verified
-on Android 14 (API 34); the Android 6 (API 23) CI emulator still misses those clock
-digits. The cause of that runtime-dependent OCR difference is not established. Numeric baseline readings and printed instrument
-text remain tested on both API levels. Do not treat successful OCR as proof that
-every character was read.
+Recognition varies by Android/OCR runtime. Exact clock recovery is checked on
+Android 14 (API 34). Earlier 0.2 tests on Android 6 (API 23) missed those clock
+digits; the cause was not established. Current source supports API 24+ and tests
+numeric baseline readings and printed instrument text on API 24 and 34.
+Do not treat successful OCR as proof that every character was read.
 
 ## Two APIs, one pipeline
 
@@ -98,7 +102,7 @@ accuracy benchmark. [Capture details and raw output](docs/images/README.md) ·
 ## Quality and development
 
 CI builds the library, a consumer of its Maven publication, and the JitPack demo; it runs JVM/Python tests and Android lint,
-verifies release contents, and exercises real-model inference on Android 23 and 34.
+verifies release contents, and exercises real-model inference on Android 24 and 34.
 Tagged releases repeat those checks before publishing model-free artifacts and checksums.
 
 | Guide | Contents |
