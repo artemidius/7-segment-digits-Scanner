@@ -7,9 +7,29 @@ Standalone Android project for the 7-Digits library and its test app.
 | `:library` | Android library, published as a release AAR with sources and Maven metadata. |
 | `:test-app` | Minimal Android app depending on the library; launches an empty `MainActivity`. |
 
-The library contains the public Kotlin recognition contract and validated result
-types. The LiteRT implementation, recognizer factory, and model assets are the next
-step. Model experiments remain in the separate `7-Digits` project.
+The library implements both recognition APIs with a private, coroutine-based
+LiteRT CPU pipeline. Supply a compatible model and label metadata as app assets.
+Model training/conversion remains in the separate `7-Digits` project.
+
+## Create a recognizer
+
+Place `detector.tflite` and `detector.json` in your app module's
+`src/main/assets/seven-digits/`, then call from a coroutine:
+
+```kotlin
+val recognizer = SevenDigitsRecognizer.create(context)
+```
+
+Creation loads and validates the model off the main thread. Keep this recognizer
+for reuse; it retains immutable model bytes, not the context. Each recognition
+call owns and releases its native interpreter, including after cancellation.
+There is no public `close()` or scope to manage.
+
+The model and metadata from `7-Digits/experiments/local/smart-bp-litert/` work with
+this implementation. That research model recognizes digits only, misses the
+clock/date content in our monitor examples, and carries upstream AGPL terms.
+Model files are supplied separately and are **not bundled in the library AAR**.
+See [model setup and runtime details](docs/API.md#model-assets).
 
 ## Public API
 
@@ -36,7 +56,7 @@ val lines: Lines = visual.toLines() // Reuse the result; no second inference.
 
 `visual.lines` preserves the row grouping; `visual.regions` is a flattened view for
 overlays. Both entry points use the same options and model capabilities.
-The runtime integration will provide the concrete recognizer. See [the API contract](docs/API.md)
+See [the API contract](docs/API.md)
 for rotation, errors, cancellation, and the current implementation status. Each
 recognition call owns its resources through structured concurrency; callers use a
 suspend function without a manual lifecycle method.
@@ -61,6 +81,29 @@ Outputs:
 
 Kotlin support is built into Android Gradle Plugin 9.5.1. Versions are defined in
 `gradle/libs.versions.toml`; the wrapper pins Gradle and its distribution checksum.
+The runtime uses LiteRT 1.4.2's CPU Interpreter and kotlinx.coroutines 1.11.0;
+these implementation dependencies are included in the published Maven metadata.
+
+## Android integration tests
+
+Generate test-only assets from the converted research model, then run against a
+connected emulator/device. The preparation script checks hashes, retains licenses,
+and fetches two pinned MIT-licensed fixture photos:
+
+```sh
+python3 scripts/prepare_instrumentation_assets.py
+./gradlew :library:connectedDebugAndroidTest
+```
+
+Use `--model-dir`, `--model-license`, or `--photos /path/to/bp-tracker/test/fixtures`
+to override the inputs. Generated assets live in `library/build/test-assets/`, are
+Git-ignored, and are packaged only into the test APK. Run preparation again after
+`clean`. Missing test assets fail the device tests rather than silently skipping them.
+
+Verified on an Android 14 / API 34 ARM64 emulator: 19 JVM tests and 6 device tests,
+including real-photo text/visual agreement, all right-angle rotations, hardware
+bitmaps, blank images, invalid assets, concurrency, and cancellation/reuse. These
+are implementation checks on two development photos, not a general OCR benchmark.
 
 ## Publish and distribute
 

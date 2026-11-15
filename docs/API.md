@@ -3,10 +3,53 @@
 Package: `dev.sevendigits`. This is an initial 0.1 API contract, subject to refinement
 before a stable release. All public declarations have KDoc and explicit visibility/types.
 
-**Implemented now:** the two recognition entry points, text projection, options,
-exception, and immutable, validated visual result types. **Next:** a concrete recognizer, creation/loading API,
-and LiteRT integration. This artifact cannot yet perform image recognition.
-The test app remains an empty activity.
+Both entry points are backed by a private LiteRT CPU implementation. The public
+factory loads a model and metadata from app assets. The test app remains an empty
+activity; automated device tests exercise the real implementation separately.
+
+## Model assets
+
+```kotlin
+val recognizer = SevenDigitsRecognizer.create(
+    context,
+    modelAssetPath = "seven-digits/detector.tflite",
+    metadataAssetPath = "seven-digits/detector.json",
+)
+```
+
+Both paths are relative to app assets and have the defaults shown. Creation is
+suspending and safe to call from the main thread. It reads an immutable snapshot,
+verifies the optional checksum, validates the model's tensors with LiteRT, and
+returns a recognizer without retaining the Context. No network access occurs.
+
+Supported model contract:
+
+- One float32 input `[1, height, width, 3]`, RGB normalized to 0..1.
+- One float32 output `[1, 4 + classCount, candidateCount]` containing xywh boxes
+  in input pixels followed by per-class scores in 0..1.
+- Fixed positive image dimensions and candidate count. Floating-point weights,
+  including float16 weights with float32 input/output, are supported.
+- Metadata JSON containing `box_units: "input_pixels"` and a `names` object with
+  contiguous class IDs starting at zero. Optional `model_sha256` pins the model bytes.
+
+Example metadata for a model with three digit classes and one enclosing-region class:
+
+```json
+{
+  "box_units": "input_pixels",
+  "names": {"0": "0", "1": "1", "2": "2", "3": "display"}
+}
+```
+
+Use the actual labels and class order of your model. The SMART-BP experiment has
+11 classes and an unusual order; its class named `10` means a reading region.
+Unknown/non-character labels are excluded before suppression. Names such as
+`dot`, `comma`, `colon`, `minus`, and `plus` map to the corresponding characters.
+
+The Android AAR includes the engine and Maven dependencies, not model weights.
+The tested SMART-BP model and JSON are in the sibling model project's
+`experiments/local/smart-bp-litert/` directory. Retain its upstream licensing terms
+when packaging that model; selecting a general-purpose release model remains separate.
 
 ## Two entry points
 
@@ -114,8 +157,12 @@ expensive work off the calling thread, including when called from the main threa
 It must use structured concurrency, keep inference resources local to the call,
 and release them in `finally` on completion, failure, or cancellation. It must
 finish its child work before returning and must not use detached background jobs.
-A `suspend` declaration alone does not provide this behavior; these are requirements
-for the forthcoming implementation.
+The supplied implementation uses `Dispatchers.IO` for loading and `Dispatchers.Default`
+for recognition, with cancellation checks between stages and during preprocessing,
+decoding, and grouping. Each call constructs its own CPU interpreter from shared
+read-only model data and releases it with `finally`/`use` before returning. Native
+inference is not interrupted mid-call; cancellation is checked immediately afterwards.
+This trades interpreter initialization per photo for isolated, automatically managed calls.
 
 - Invalid options, result values, or unreadable/recycled input: `IllegalArgumentException`.
 - Operational failures, including inference/model resource failures: `RecognitionException`.
@@ -137,7 +184,34 @@ The recognizer remains reusable; there is no manual shutdown step.
 
 Unit tests cover multiple fields per row, separate rows, exact string preservation,
 reading order after rotation, small punctuation bounds, minimum scores, defensive
-collection snapshots and text projection at both list levels, empty
-detections, image boundaries, and invalid/non-finite values. Runtime scheduling,
-cancellation, resource cleanup, coordinate transformation, and OCR accuracy will be tested
-when the implementation exists; the current tests do not claim to verify inference.
+collection snapshots and text projection at both list levels, empty detections,
+image boundaries, and invalid/non-finite values. Decoder tests cover ignored classes,
+overlapping detections, clipping, threshold boundaries, row/field grouping, punctuation,
+all rotation transforms, and odd aspect ratios. Controlled blocking-session tests
+verify cleanup on success/failure and that cancellation waits for a native call to
+finish before releasing resources.
+
+Six device tests ran on Android 14 / API 34 ARM64 using the real converted SMART-BP
+model. Both full-photo fixtures returned `[["126"], ["81"], ["81"]]` through text and
+visual APIs. Tests also cover rotated photos and box coordinates, concurrent calls,
+cancellation and reuse, invalid model assets, blank/recycled images, normalization,
+padding, and hardware bitmaps. The 19 JVM tests and all device tests passed.
+
+The two photos are development fixtures from the MIT-licensed
+[bp-tracker](https://github.com/chakib-belgaid/bp-tracker/tree/ba4701e3e72767d096b48fb1b3277664a58b0138)
+repository. This verifies the Android pipeline on those examples, not recognition
+accuracy across devices. Clock/date recognition remains limited by the selected model.
+
+## Private pipeline
+
+The implementation uses the maintained LiteRT 1.4.2 Interpreter branch for CPU
+inference ([Android runtime versions](https://developers.google.com/edge/litert/android)).
+It applies rotation and aspect-preserving resizing into a gray (114) letterbox,
+normalizes RGB pixels, then decodes model candidates. Character filtering precedes
+class-agnostic IoU suppression at 0.45 so enclosing reading boxes do not hide digits.
+Grouping uses digit-row geometry, attaches nearby punctuation, splits wide horizontal
+gaps into fields, and maps boxes back to the original bitmap after grouping.
+
+These operations are implementation details; neither LiteRT types nor native resource
+management appears in the public recognition API. The model is loaded once per factory
+call; the process/GC manages the immutable model buffer's lifetime.

@@ -11,16 +11,22 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.coroutines.core)
+    implementation(libs.litert)
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
 }
 
 android {
     namespace = "dev.sevendigits"
     compileSdk = libs.versions.compileSdk.get().toInt()
+    sourceSets.getByName("androidTest").assets.srcDir(layout.buildDirectory.dir("test-assets").get().asFile)
 
     defaultConfig {
         minSdk = libs.versions.minSdk.get().toInt()
         consumerProguardFiles("consumer-rules.pro")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
