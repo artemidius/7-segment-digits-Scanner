@@ -13,3 +13,8 @@ captures/
 .env
 test-app/libs/*.aar
 test-app/src/main/assets/seven-digits/
+models/
+.venv*/
+__pycache__/
+*.pyc
+dist/

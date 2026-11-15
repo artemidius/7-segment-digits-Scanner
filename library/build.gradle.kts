@@ -51,6 +51,26 @@ publishing {
             pom {
                 name.set("7-Digits")
                 description.set("Android library for seven-segment display recognition.")
+                url.set("https://github.com/artemidius/7-segment-digits-Scanner")
+                licenses {
+                    license {
+                        name.set("Apache License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                        distribution.set("repo")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("artemidius")
+                        name.set("artemidius")
+                        url.set("https://github.com/artemidius")
+                    }
+                }
+                scm {
+                    url.set("https://github.com/artemidius/7-segment-digits-Scanner")
+                    connection.set("scm:git:https://github.com/artemidius/7-segment-digits-Scanner.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/artemidius/7-segment-digits-Scanner.git")
+                }
             }
 
             afterEvaluate {

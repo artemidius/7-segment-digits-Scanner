@@ -47,9 +47,9 @@ Unknown/non-character labels are excluded before suppression. Names such as
 `dot`, `comma`, `colon`, `minus`, and `plus` map to the corresponding characters.
 
 The Android AAR includes the engine and Maven dependencies, not model weights.
-The tested SMART-BP model and JSON are in the sibling model project's
-`experiments/local/smart-bp-litert/` directory. Retain its upstream licensing terms
-when packaging that model; selecting a general-purpose release model remains separate.
+The optional SMART-BP model can be fetched and converted using the pinned
+[model setup](MODELS.md). Retain its upstream licensing terms when packaging that
+model; selecting a general-purpose release model remains separate.
 
 ## Two entry points
 
