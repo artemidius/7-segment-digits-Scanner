@@ -4,8 +4,8 @@ Package: `dev.sevendigits`. This is an initial 0.1 API contract, subject to refi
 before a stable release. All public declarations have KDoc and explicit visibility/types.
 
 Both entry points are backed by a private LiteRT CPU implementation. The public
-factory loads a model and metadata from app assets. The test app remains an empty
-activity; automated device tests exercise the real implementation separately.
+factory loads a model and metadata from app assets. The test app consumes the
+library as a local AAR and demonstrates both outputs for a gallery image.
 
 ## Model assets
 
@@ -144,8 +144,10 @@ listOf(
 This illustrates the data format, not current model performance. The research
 SMART-BP baseline still misses clock digits and lacks punctuation classes.
 
-The API does not assign SYS/DIA/pulse labels, convert strings to numbers or dates,
-insert missing characters, or claim a reading is complete. A successful empty
+The API returns detected characters across the display without identifying dates,
+times, or medical measurements. It does not filter out date/time content, assign
+SYS/DIA/pulse labels, convert strings to numbers or dates, insert missing characters,
+or claim a reading is complete. Meaning is exclusively the client's responsibility. A successful empty
 outer list means nothing met the detection criteria. Partial results are also possible.
 Empty rows and placeholder strings are not inserted to represent gaps or missed content.
 
