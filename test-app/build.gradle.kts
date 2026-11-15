@@ -27,6 +27,7 @@ dependencies {
     implementation(libs.litert)
     implementation(libs.coroutines.android)
     implementation(libs.exifinterface)
+    implementation(libs.androidx.core)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
 }
