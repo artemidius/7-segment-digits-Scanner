@@ -22,6 +22,8 @@ def main():
         with zipfile.ZipFile(io.BytesIO(package.read('classes.jar'))) as classes:
             assert 'dev/sevendigits/SevenDigitsRecognizer.class' in classes.namelist()
             assert any(name.endswith('/LICENSE') for name in classes.namelist()), 'AAR license missing'
+    with zipfile.ZipFile(publication/f'{prefix}-sources.jar') as sources:
+        assert 'META-INF/LICENSE' in sources.namelist(), 'Source JAR license missing'
     pom = ET.parse(publication/f'{prefix}.pom').getroot()
     ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
     assert pom.find('m:version', ns).text == version

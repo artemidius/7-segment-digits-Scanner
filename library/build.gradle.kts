@@ -10,6 +10,10 @@ kotlin {
     explicitApi()
 }
 
+tasks.withType<Jar>().configureEach {
+    from(rootProject.file("LICENSE")) { into("META-INF") }
+}
+
 dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.litert)
