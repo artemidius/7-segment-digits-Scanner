@@ -67,7 +67,9 @@ broken certificate setup; repair its CA configuration or use a configured Python
 | Library device tests | Numeric baseline, hybrid clock/label regressions, printed meter/sensor text, rotations, cancellation, invalid models, bitmap formats |
 | App device tests | Hybrid AAR gallery output, gallery/camera results, lifecycle, permissions, cancellation, errors, EXIF, bounded decoding |
 
-Camera intent-interception tests require API 26+ and are explicitly skipped on API 23.
+Camera intent-interception tests require API 26+. The exact clock fixture regression
+runs on API 34+, where recovery was verified; API 23 misses those clocks and this
+is documented as a runtime-dependent OCR limitation, not a minimum SDK change.
 The other tests run on both CI devices. Actual camera capture and recovery after
 killing the demo process were also checked manually on an API 34 ARM64 emulator.
 These are implementation checks, not broad model-accuracy evidence.

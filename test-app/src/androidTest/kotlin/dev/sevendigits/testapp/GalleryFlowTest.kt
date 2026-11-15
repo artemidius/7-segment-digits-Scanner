@@ -22,6 +22,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class GalleryFlowTest {
+    private val expectedPrintedText = listOf("TEMP", "-12.5", "°C", "METER", "001234", "kWh")
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
@@ -77,7 +78,7 @@ class GalleryFlowTest {
                     if (lines.contains("TEMP")) break
                     Thread.sleep(100)
                 }
-                for (text in listOf("TEMP", "-12.5", "°C", "METER", "001234", "kWh")) {
+                for (text in expectedPrintedText) {
                     assertTrue("Missing $text in $lines", lines.contains(text))
                 }
                 scenario.onActivity {

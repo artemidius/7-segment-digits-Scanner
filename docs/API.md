@@ -154,3 +154,9 @@ The two real photos are development fixtures from the MIT-licensed
 [bp-tracker](https://github.com/chakib-belgaid/bp-tracker/tree/ba4701e3e72767d096b48fb1b3277664a58b0138)
 repository. They are not a held-out benchmark. Printed instrument test images are
 generated in the tests; broad real thermometer/meter/sensor accuracy is unmeasured.
+
+Recognition varies by Android/OCR runtime. The clock-photo regression is verified
+on Android 14 (API 34); the Android 6 (API 23) CI emulator still misses those clock
+digits. The cause of that runtime-dependent OCR difference is not established. Numeric baseline readings and printed instrument
+text remain tested on both API levels. Do not treat successful OCR as proof that
+every character was read.

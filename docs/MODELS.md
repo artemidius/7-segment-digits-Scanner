@@ -45,6 +45,12 @@ time. This does not fix the detector’s underlying training bias: cropped clock
 digits can still be misclassified. Other device families need representative tests.
 Handwriting and non-Latin script OCR are outside this implementation.
 
+Recognition varies by Android/OCR runtime. The clock-photo regression is verified
+on Android 14 (API 34); the Android 6 (API 23) CI emulator still misses those clock
+digits. The cause of that runtime-dependent OCR difference is not established. Numeric baseline readings and printed instrument
+text remain tested on both API levels. Do not treat successful OCR as proof that
+every character was read.
+
 ### Fetch and convert
 
 Python 3.12 and several GB of free disk space are needed for the optional conversion

@@ -27,6 +27,11 @@ class TextMergerTest {
         assertEquals("SYS", result.single().single().text)
     }
 
+    @Test fun isolatedLetterMisreadDoesNotEraseADigitInAnEstablishedNumericField() = runBlocking {
+        val result = mergeText(chars("81"), listOf(word("B")))
+        assertEquals("81", result.single().single().text)
+    }
+
     @Test fun keepsSpatiallySeparateReadingsAndRowsWithoutMedicalInterpretation() = runBlocking {
         val digits = chars("20") + chars("01", 60f) + chars("008", 0f, 60f)
         val result = mergeText(digits, listOf(word("kWh", 60f, 60f)))

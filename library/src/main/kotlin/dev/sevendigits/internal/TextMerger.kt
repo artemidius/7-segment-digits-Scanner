@@ -31,7 +31,15 @@ internal suspend fun mergeText(
     segment: List<RecognizedCharacter>,
     general: List<TextRegion>,
 ): List<List<TextRegion>> {
-    val words = general.filter { it.text.count(Char::isLetter) > it.text.count(Char::isDigit) }
+    val numericFields = groupDetections(segment).flatten().map { TextRegion(it) }
+    val words = general.filter { word ->
+        word.text.count(Char::isLetter) > word.text.count(Char::isDigit) &&
+            // General OCR can read an LCD 8 as an isolated B. A short fragment inside
+            // an established multi-digit field must not erase the detector's reading.
+            !(word.text.length <= 2 && numericFields.any { field ->
+                field.characters.size >= 2 && sameGlyph(field.boundingBox, word.boundingBox)
+            })
+    }
     val unused = segment.filterNot { digit -> words.any { sameGlyph(it.boundingBox, digit.boundingBox) } }.toMutableList()
     val fields = groupDetections(unused).flatten().map { TextRegion(it) }
     val regions = ArrayList<TextRegion>()
