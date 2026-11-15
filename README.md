@@ -7,8 +7,27 @@ Standalone Android project for the 7-Digits library and its test app.
 | `:library` | Android library, published as a release AAR with sources and Maven metadata. |
 | `:test-app` | Minimal Android app depending on the library; launches an empty `MainActivity`. |
 
-This is the project scaffold. The library has no recognition API, LiteRT runtime,
-or model assets yet. Model experiments remain in the separate `7-Digits` project.
+The library contains the public Kotlin recognition contract and validated result
+types. The LiteRT implementation, recognizer factory, and model assets are the next
+step. Model experiments remain in the separate `7-Digits` project.
+
+## Public API
+
+```kotlin
+import android.graphics.Bitmap
+import dev.sevendigits.SevenDigitsRecognizer
+
+// The recognizer implementation will be supplied by the runtime integration.
+suspend fun readDisplay(recognizer: SevenDigitsRecognizer, photo: Bitmap): List<String> {
+    val result = recognizer.recognize(photo)
+    return result.regions.map { it.text }
+}
+```
+
+Each region exposes its text, original-image bounding box, minimum character score,
+and individual characters. The API preserves leading zeros and punctuation and
+reports the loaded model's supported characters. See [the API contract](docs/API.md)
+for rotation, errors, cancellation, lifecycle, and the current implementation status.
 
 ## Build
 
@@ -19,6 +38,7 @@ The minimum supported Android API is currently 23.
 
 ```sh
 ./gradlew :library:assembleRelease :test-app:assembleDebug
+./gradlew :library:testDebugUnitTest
 ./gradlew :library:lintRelease :test-app:lintDebug
 ```
 

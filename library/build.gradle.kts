@@ -6,6 +6,14 @@ plugins {
 group = providers.gradleProperty("libraryGroup").get()
 version = providers.gradleProperty("libraryVersion").get()
 
+kotlin {
+    explicitApi()
+}
+
+dependencies {
+    testImplementation(libs.junit)
+}
+
 android {
     namespace = "dev.sevendigits"
     compileSdk = libs.versions.compileSdk.get().toInt()
