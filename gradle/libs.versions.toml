@@ -11,7 +11,7 @@ mlkitText = "16.0.1"
 androidxTestRunner = "1.7.0"
 androidxTestJunit = "1.3.0"
 exifinterface = "1.4.2"
-androidxCore = "1.17.0"
+androidxCore = "1.19.1"
 
 [libraries]
 scanner = { module = "com.github.artemidius:7-segment-digits-Scanner", version.ref = "scanner" }
