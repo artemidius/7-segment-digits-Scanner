@@ -1,9 +1,10 @@
 [versions]
 scanner = "v0.2.0-alpha.1"
 agp = "9.5.1"
+kotlin = "2.4.21"
 compileSdk = "37"
 targetSdk = "37"
-minSdk = "23"
+minSdk = "24"
 junit = "4.13.2"
 coroutines = "1.11.0"
 litert = "2.3.2"
@@ -14,6 +15,7 @@ exifinterface = "1.4.2"
 androidxCore = "1.19.1"
 
 [libraries]
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 scanner = { module = "com.github.artemidius:7-segment-digits-Scanner", version.ref = "scanner" }
 mlkit-text = { module = "com.google.mlkit:text-recognition", version.ref = "mlkitText" }
 junit = { module = "junit:junit", version.ref = "junit" }

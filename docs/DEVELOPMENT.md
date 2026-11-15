@@ -5,11 +5,14 @@
 - JDK 21 recommended (AGP minimum 17).
 - Android SDK platform `platforms;android-37.0`, build-tools `36.0.0`, platform-tools.
 - Python 3 for asset/build scripts; Python 3.12 only for optional model conversion.
-- Android API 23+ device/emulator for instrumentation tests.
+- Android API 24+ device/emulator for instrumentation tests.
 
 Set `ANDROID_HOME` or let Android Studio generate ignored `local.properties`.
 The wrapper pins Gradle 9.9.1 and its distribution checksum; AGP 9.5.1 supplies
-built-in Kotlin support. A system Gradle installation is unnecessary.
+built-in Kotlin support. The root buildscript pins Kotlin Gradle Plugin 2.4.21
+because LiteRT 2.3.2 contains Kotlin 2.4 metadata. Keep built-in Kotlin enabled;
+no separate `kotlin-android` plugin or metadata-check bypass is needed.
+A system Gradle installation is unnecessary.
 
 ## Fresh checkout: library and model-free app
 
@@ -73,8 +76,8 @@ broken certificate setup; repair its CA configuration or use a configured Python
 | App device tests | Published JitPack gallery output, gallery/camera results, lifecycle, permissions, cancellation, errors, EXIF, bounded decoding |
 
 Camera intent-interception tests require API 26+. The exact clock fixture regression
-runs on API 34+, where recovery was verified; API 23 misses those clocks and this
-is documented as a runtime-dependent OCR limitation, not a minimum SDK change.
+runs on API 34+, where recovery was verified. Earlier 0.2 tests on API 23 missed
+those clocks; current source requires API 24 because of the LiteRT AAR manifests.
 The other tests run on both CI devices. Actual camera capture and recovery after
 killing the demo process were also checked manually on an API 34 ARM64 emulator.
 These are implementation checks, not broad model-accuracy evidence.
@@ -85,7 +88,7 @@ CI runs on pushes to `main`, pull requests, and manual dispatch. It checks unit
 tests, lint, a consumer of the current Maven publication, the pinned JitPack demo,
 and publication contents. A separate job
 fetches/converts the pinned AGPL research model and caches it with the complete
-upstream archive and notices. Android 23 and 34 jobs exercise real inference.
+upstream archive and notices. Android 24 and 34 jobs exercise real inference.
 Only reports and model-free library artifacts are uploaded for distribution.
 
 Actions are pinned by commit SHA; pull-request jobs have read-only repository

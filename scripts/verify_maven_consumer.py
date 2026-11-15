@@ -19,6 +19,8 @@ def main():
     repository = args.repository if args.repository.startswith('https://') else Path(args.repository).resolve().as_uri()
     versions = (ROOT/'gradle/libs.versions.toml').read_text()
     agp = re.search(r'^agp = "([^"]+)"', versions, re.M).group(1)
+    kotlin = re.search(r'^kotlin = "([^"]+)"', versions, re.M).group(1)
+    min_sdk = int(re.search(r'^minSdk = "(\d+)"', versions, re.M).group(1))
     with tempfile.TemporaryDirectory(prefix='seven-digits-consumer-') as temporary:
         target = Path(temporary)
         shutil.copyfile(ROOT/'gradlew', target/'gradlew')
@@ -42,11 +44,12 @@ rootProject.name = "published-scanner-consumer"
 ''')
         (target/'gradle.properties').write_text('android.useAndroidX=true\norg.gradle.jvmargs=-Xmx2g\n')
         (target/'build.gradle.kts').write_text(f'''
+buildscript {{ dependencies {{ classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:{kotlin}") }} }}
 plugins {{ id("com.android.application") version "{agp}" }}
 android {{
     namespace = "dev.sevendigits.consumercheck"
     compileSdk = 37
-    defaultConfig {{ applicationId = "dev.sevendigits.consumercheck"; minSdk = 23; targetSdk = 37 }}
+    defaultConfig {{ applicationId = "dev.sevendigits.consumercheck"; minSdk = {min_sdk}; targetSdk = 37 }}
     compileOptions {{ sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }}
 }}
 dependencies {{ implementation({json.dumps(args.coordinate)}) }}

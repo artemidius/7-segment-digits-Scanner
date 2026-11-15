@@ -1,6 +1,6 @@
 # Public recognition API
 
-Package: `dev.sevendigits`. This is the `0.2.0-alpha.1` hybrid API, available from
+Package: `dev.sevendigits`. The hybrid API is unchanged from `0.2.0-alpha.1`, available from
 JitPack. The earlier `0.1.0-alpha.1` uses the original numeric pipeline.
 
 ## Creation and ownership
@@ -155,8 +155,8 @@ The two real photos are development fixtures from the MIT-licensed
 repository. They are not a held-out benchmark. Printed instrument test images are
 generated in the tests; broad real thermometer/meter/sensor accuracy is unmeasured.
 
-Recognition varies by Android/OCR runtime. The clock-photo regression is verified
-on Android 14 (API 34); the Android 6 (API 23) CI emulator still misses those clock
-digits. The cause of that runtime-dependent OCR difference is not established. Numeric baseline readings and printed instrument
-text remain tested on both API levels. Do not treat successful OCR as proof that
-every character was read.
+Recognition varies by Android/OCR runtime. Exact clock recovery is checked on
+Android 14 (API 34). Earlier 0.2 tests on Android 6 (API 23) missed those clock
+digits; the cause was not established. Current source supports API 24+ and tests
+numeric baseline readings and printed instrument text on API 24 and 34.
+Do not treat successful OCR as proof that every character was read.
